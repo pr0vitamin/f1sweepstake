@@ -1,4 +1,5 @@
 import os
+from socket import gethostname
 from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, flash, request, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -675,4 +676,5 @@ def initialize_database():
 if __name__ == '__main__':
     with app.app_context():
         initialize_database()
+    if 'liveconsole' not in gethostname(): # check if running on PythonAnywhere
     app.run()
