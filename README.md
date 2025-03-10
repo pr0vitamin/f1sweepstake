@@ -39,7 +39,7 @@ export SECRET_KEY="your-secret-key"
 
 4. Run the application:
 ```
-python app.py
+python flask_app.py
 ```
 
 5. Access the application at http://localhost:5000
