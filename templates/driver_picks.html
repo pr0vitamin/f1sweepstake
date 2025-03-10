@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Driver Picks - {{ grand_prix.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Driver Picks for {{ grand_prix.name }}</h1>
+        <p class="lead">Race Date: {{ grand_prix.date.strftime('%d %B %Y') }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Select Top Team Driver</h3>
+            </div>
+            <div class="card-body">
+                {% if results_exist %}
+                <div class="alert alert-warning">
+                    <h4 class="alert-heading">Driver picks locked</h4>
+                    <p>Race results are available for this Grand Prix. Driver picks can no longer be changed.</p>
+                </div>
+                {% endif %}
+                <form method="POST" {% if results_exist %}class="opacity-50"{% endif %}>
+                    <input type="hidden" name="selection_type" value="top">
+                    <div class="mb-3">
+                        <label for="user_id_top" class="form-label">Select User</label>
+                        <select class="form-select" id="user_id_top" name="user_id" required {% if results_exist %}disabled{% endif %}>
+                            <option value="">Select User</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="top_driver_id" class="form-label">Select Top Team Driver</label>
+                        <select class="form-select" id="top_driver_id" name="top_driver_id" required disabled>
+                            <option value="">Select Driver</option>
+                            {% for driver in top_drivers %}
+                            <option value="{{ driver.id }}" {% if driver.id in selected_drivers %}disabled{% endif %}>
+                                {{ driver.name }} ({{ driver.number }}) - {{ driver.team.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="topSubmitBtn" disabled {% if results_exist %}disabled{% endif %}>Save Top Driver Selection</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0">Select Bottom Team Driver</h3>
+            </div>
+            <div class="card-body">
+                {% if results_exist %}
+                <div class="alert alert-warning">
+                    <h4 class="alert-heading">Driver picks locked</h4>
+                    <p>Race results are available for this Grand Prix. Driver picks can no longer be changed.</p>
+                </div>
+                {% endif %}
+                <form method="POST" {% if results_exist %}class="opacity-50"{% endif %}>
+                    <input type="hidden" name="selection_type" value="bottom">
+                    <div class="mb-3">
+                        <label for="user_id_bottom" class="form-label">Select User</label>
+                        <select class="form-select" id="user_id_bottom" name="user_id" required {% if results_exist %}disabled{% endif %}>
+                            <option value="">Select User</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="bottom_driver_id" class="form-label">Select Bottom Team Driver</label>
+                        <select class="form-select" id="bottom_driver_id" name="bottom_driver_id" required disabled>
+                            <option value="">Select Driver</option>
+                            {% for driver in bottom_drivers %}
+                            <option value="{{ driver.id }}" {% if driver.id in selected_drivers %}disabled{% endif %}>
+                                {{ driver.name }} ({{ driver.number }}) - {{ driver.team.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success" id="bottomSubmitBtn" disabled {% if results_exist %}disabled{% endif %}>Save Bottom Driver Selection</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0">Current Selections</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Top Team Driver</th>
+                                <th>Bottom Team Driver</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.name }}</td>
+                                <td>
+                                    {% if user.id in user_top_drivers %}
+                                        {{ user_top_drivers[user.id].name }} ({{ user_top_drivers[user.id].number }}) - {{ user_top_drivers[user.id].team.name }}
+                                    {% else %}
+                                        Not selected
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.id in user_bottom_drivers %}
+                                        {{ user_bottom_drivers[user.id].name }} ({{ user_bottom_drivers[user.id].number }}) - {{ user_bottom_drivers[user.id].team.name }}
+                                    {% else %}
+                                        Not selected
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userSelectTop = document.getElementById('user_id_top');
+        const userSelectBottom = document.getElementById('user_id_bottom');
+        const topDriverSelect = document.getElementById('top_driver_id');
+        const bottomDriverSelect = document.getElementById('bottom_driver_id');
+        const topSubmitBtn = document.getElementById('topSubmitBtn');
+        const bottomSubmitBtn = document.getElementById('bottomSubmitBtn');
+        
+        // Store current selections
+        const userSelections = {{ user_selections|tojson|safe }};
+        const selectedDrivers = {{ selected_drivers|tojson|safe }};
+        
+        // Enable top driver select when user is selected
+        userSelectTop.addEventListener('change', function() {
+            const userId = parseInt(this.value);
+            
+            if (userId) {
+                topDriverSelect.disabled = false;
+                updateTopDriverOptions(userId);
+            } else {
+                topDriverSelect.disabled = true;
+                topSubmitBtn.disabled = true;
+            }
+        });
+        
+        // Enable bottom driver select when user is selected
+        userSelectBottom.addEventListener('change', function() {
+            const userId = parseInt(this.value);
+            
+            if (userId) {
+                bottomDriverSelect.disabled = false;
+                updateBottomDriverOptions(userId);
+            } else {
+                bottomDriverSelect.disabled = true;
+                bottomSubmitBtn.disabled = true;
+            }
+        });
+        
+        // Check if top driver is selected to enable submit button
+        topDriverSelect.addEventListener('change', function() {
+            topSubmitBtn.disabled = !this.value;
+        });
+        
+        // Check if bottom driver is selected to enable submit button
+        bottomDriverSelect.addEventListener('change', function() {
+            bottomSubmitBtn.disabled = !this.value;
+        });
+        
+        // Update top driver options based on user's current selections
+        function updateTopDriverOptions(userId) {
+            // Get current user's selections
+            const userDrivers = userSelections[userId] || [];
+            
+            // Reset options
+            for (const option of topDriverSelect.options) {
+                if (option.value) {
+                    option.disabled = (selectedDrivers.includes(parseInt(option.value)) && 
+                                     !userDrivers.includes(parseInt(option.value)));
+                }
+            }
+            
+            // Set current selection if it exists
+            let hasTopSelection = false;
+            if (userDrivers.length > 0) {
+                for (const driverId of userDrivers) {
+                    // Check if this is a top team driver
+                    for (const option of topDriverSelect.options) {
+                        if (parseInt(option.value) === driverId) {
+                            topDriverSelect.value = driverId;
+                            hasTopSelection = true;
+                            break;
+                        }
+                    }
+                    if (hasTopSelection) break;
+                }
+            }
+            
+            // Enable submit button if driver is selected
+            topSubmitBtn.disabled = !topDriverSelect.value;
+            
+            // Reset selection if no existing selection
+            if (!hasTopSelection) {
+                topDriverSelect.value = '';
+            }
+        }
+        
+        // Update bottom driver options based on user's current selections
+        function updateBottomDriverOptions(userId) {
+            // Get current user's selections
+            const userDrivers = userSelections[userId] || [];
+            
+            // Reset options
+            for (const option of bottomDriverSelect.options) {
+                if (option.value) {
+                    option.disabled = (selectedDrivers.includes(parseInt(option.value)) && 
+                                     !userDrivers.includes(parseInt(option.value)));
+                }
+            }
+            
+            // Set current selection if it exists
+            let hasBottomSelection = false;
+            if (userDrivers.length > 0) {
+                for (const driverId of userDrivers) {
+                    // Check if this is a bottom team driver
+                    for (const option of bottomDriverSelect.options) {
+                        if (parseInt(option.value) === driverId) {
+                            bottomDriverSelect.value = driverId;
+                            hasBottomSelection = true;
+                            break;
+                        }
+                    }
+                    if (hasBottomSelection) break;
+                }
+            }
+            
+            // Enable submit button if driver is selected
+            bottomSubmitBtn.disabled = !bottomDriverSelect.value;
+            
+            // Reset selection if no existing selection
+            if (!hasBottomSelection) {
+                bottomDriverSelect.value = '';
+            }
+        }
+    });
+</script>
+{% endblock %}

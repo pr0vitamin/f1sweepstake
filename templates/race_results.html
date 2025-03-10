@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Race Results - {{ grand_prix.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Race Results: {{ grand_prix.name }}</h1>
+        <p class="lead">Race Date: {{ grand_prix.date.strftime('%d %B %Y') }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Race Results</h3>
+            </div>
+            <div class="card-body">
+                {% if results %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Position</th>
+                                <th>Driver</th>
+                                <th>Team</th>
+                                <th>Points</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in results %}
+                            <tr {% if result.position == 1 %}style="background-color: #FFD700 !important; font-weight: bold;"{% elif result.position == 2 %}style="background-color: #A9A9A9 !important; font-weight: bold;"{% elif result.position == 3 %}style="background-color: #B87333 !important; font-weight: bold;"{% endif %}>
+                                <td>{{ result.position }}</td>
+                                <td>{{ result.driver.name }} ({{ result.driver.number }})</td>
+                                <td>{{ result.driver.team.name }}</td>
+                                <td>
+                                    {% set points_mapping = namespace(value=0) %}
+                                    {% for pm in points_mappings %}
+                                        {% if pm.position == result.position %}
+                                            {% set points_mapping.value = pm.points %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ points_mapping.value }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <h4 class="alert-heading">Race results not yet available</h4>
+                    <p>The results for this race have not been entered yet. Please check back later or go to the Configuration page to enter the results.</p>
+                    <hr>
+                    <p class="mb-0">
+                        <a href="{{ url_for('config') }}" class="btn btn-primary">Go to Configuration</a>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if results %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0">Sweepstake Points</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Position</th>
+                                <th>User</th>
+                                <th>Points</th>
+                                <th>Driver Selections</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user_id, points in user_points %}
+                            <tr {% if loop.index == 1 %}style="background-color: #FFD700 !important; font-weight: bold;"{% elif loop.index == 2 %}style="background-color: #A9A9A9 !important; font-weight: bold;"{% elif loop.index == 3 %}style="background-color: #B87333 !important; font-weight: bold;"{% endif %}>
+                                <td>{{ loop.index }}</td>
+                                <td>
+                                    {% for user in users %}
+                                        {% if user.id == user_id %}
+                                            {{ user.name }}
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td>{{ points }}</td>
+                                <td>
+                                    {% if user_selections[user_id] %}
+                                        {% for driver in user_selections[user_id] %}
+                                            {{ driver.name }}
+                                            {% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        No selections made
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

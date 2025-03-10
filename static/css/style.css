@@ -1,0 +1,132 @@
+/* Custom styles for F1 Sweepstakes */
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f8f9fa;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.card {
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    border-top-left-radius: 0.5rem !important;
+    border-top-right-radius: 0.5rem !important;
+    font-weight: bold;
+}
+
+.btn-primary {
+    background-color: #e10600;
+    border-color: #e10600;
+}
+
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background-color: #c00500;
+    border-color: #c00500;
+}
+
+.btn-success {
+    background-color: #00843d;
+    border-color: #00843d;
+}
+
+.btn-success:hover, .btn-success:focus, .btn-success:active {
+    background-color: #006e33;
+    border-color: #006e33;
+}
+
+.btn-info {
+    background-color: #0090d0;
+    border-color: #0090d0;
+    color: white;
+}
+
+.btn-info:hover, .btn-info:focus, .btn-info:active {
+    background-color: #007bb8;
+    border-color: #007bb8;
+    color: white;
+}
+
+.table th {
+    background-color: #f1f1f1;
+}
+
+.footer {
+    margin-top: 3rem;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Login page */
+.login-container {
+    max-width: 400px;
+    margin: 2rem auto;
+}
+
+/* Dashboard */
+.race-calendar-card {
+    height: 100%;
+}
+
+/* Driver picks */
+.driver-selection-card {
+    transition: all 0.3s ease;
+}
+
+.driver-selection-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Leaderboard */
+.leaderboard-position {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.position-1 {
+    color: gold;
+}
+
+.position-2 {
+    color: silver;
+}
+
+.position-3 {
+    color: #cd7f32; /* bronze */
+}
+
+/* Race results */
+.race-result-highlight {
+    background-color: #fff3cd;
+}
+
+/* Config page */
+.tab-content {
+    background-color: white;
+}
+
+.nav-tabs .nav-link.active {
+    font-weight: bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .table {
+        font-size: 0.9rem;
+    }
+}

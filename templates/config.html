@@ -1,0 +1,740 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Configuration</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <ul class="nav nav-tabs" id="configTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'users' %}active{% endif %}" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab" aria-controls="users" aria-selected="{{ 'true' if active_tab == 'users' else 'false' }}">Users</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'teams' %}active{% endif %}" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab" aria-controls="teams" aria-selected="{{ 'true' if active_tab == 'teams' else 'false' }}">Teams</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'drivers' %}active{% endif %}" id="drivers-tab" data-bs-toggle="tab" data-bs-target="#drivers" type="button" role="tab" aria-controls="drivers" aria-selected="{{ 'true' if active_tab == 'drivers' else 'false' }}">Drivers</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'races' %}active{% endif %}" id="races-tab" data-bs-toggle="tab" data-bs-target="#races" type="button" role="tab" aria-controls="races" aria-selected="{{ 'true' if active_tab == 'races' else 'false' }}">Grand Prix</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'points' %}active{% endif %}" id="points-tab" data-bs-toggle="tab" data-bs-target="#points" type="button" role="tab" aria-controls="points" aria-selected="{{ 'true' if active_tab == 'points' else 'false' }}">Points Mapping</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'results' %}active{% endif %}" id="results-tab" data-bs-toggle="tab" data-bs-target="#results" type="button" role="tab" aria-controls="results" aria-selected="{{ 'true' if active_tab == 'results' else 'false' }}">Race Results</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'password' %}active{% endif %}" id="password-tab" data-bs-toggle="tab" data-bs-target="#password" type="button" role="tab" aria-controls="password" aria-selected="{{ 'true' if active_tab == 'password' else 'false' }}">Password</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content p-3 border border-top-0 rounded-bottom" id="configTabsContent">
+            <!-- Users Tab -->
+            <div class="tab-pane fade {% if active_tab == 'users' %}show active{% endif %}" id="users" role="tabpanel" aria-labelledby="users-tab">
+                <h3>Manage Users</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <form method="POST" id="userForm">
+                            <input type="hidden" name="action" value="add_user" id="userAction">
+                            <input type="hidden" name="user_id" id="editUserId">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">User Name</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary" id="userSubmitBtn">Add User</button>
+                                <button type="button" class="btn btn-secondary d-none" id="userCancelBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>Current Users</h4>
+                        {% if users %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Points</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users %}
+                                    <tr>
+                                        <td>{{ user.name }}</td>
+                                        <td><span class="badge bg-primary rounded-pill">{{ user.points }}</span></td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary edit-user" 
+                                                        data-id="{{ user.id }}" data-name="{{ user.name }}">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger delete-user" 
+                                                        data-id="{{ user.id }}" data-name="{{ user.name }}">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p>No users added yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Teams Tab -->
+            <div class="tab-pane fade {% if active_tab == 'teams' %}show active{% endif %}" id="teams" role="tabpanel" aria-labelledby="teams-tab">
+                <h3>Manage Teams</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <form method="POST" id="teamForm">
+                            <input type="hidden" name="action" value="add_team" id="teamAction">
+                            <input type="hidden" name="team_id" id="editTeamId">
+                            <div class="mb-3">
+                                <label for="team_name" class="form-label">Team Name</label>
+                                <input type="text" class="form-control" id="team_name" name="team_name" required>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="is_top_team" name="is_top_team">
+                                <label class="form-check-label" for="is_top_team">Top Team</label>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary" id="teamSubmitBtn">Add Team</button>
+                                <button type="button" class="btn btn-secondary d-none" id="teamCancelBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>Current Teams</h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Team Name</th>
+                                        <th>Category</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for team in teams %}
+                                    <tr>
+                                        <td>{{ team.name }}</td>
+                                        <td>
+                                            <span class="badge {% if team.is_top_team %}bg-success{% else %}bg-warning{% endif %}">
+                                                {% if team.is_top_team %}Top{% else %}Bottom{% endif %}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary edit-team" 
+                                                        data-id="{{ team.id }}" data-name="{{ team.name }}" 
+                                                        data-is-top="{{ team.is_top_team|lower }}">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger delete-team" 
+                                                        data-id="{{ team.id }}" data-name="{{ team.name }}">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if not teams %}
+                        <p>No teams added yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Drivers Tab -->
+            <div class="tab-pane fade {% if active_tab == 'drivers' %}show active{% endif %}" id="drivers" role="tabpanel" aria-labelledby="drivers-tab">
+                <h3>Manage Drivers</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <form method="POST" id="driverForm">
+                            <input type="hidden" name="action" value="add_driver" id="driverAction">
+                            <input type="hidden" name="driver_id" id="editDriverId">
+                            <div class="mb-3">
+                                <label for="driver_name" class="form-label">Driver Name</label>
+                                <input type="text" class="form-control" id="driver_name" name="driver_name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="driver_number" class="form-label">Driver Number</label>
+                                <input type="number" class="form-control" id="driver_number" name="driver_number" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="team_id" class="form-label">Team</label>
+                                <select class="form-select" id="team_id" name="team_id" required>
+                                    <option value="">Select Team</option>
+                                    {% for team in teams %}
+                                    <option value="{{ team.id }}">{{ team.name }} ({% if team.is_top_team %}Top{% else %}Bottom{% endif %})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary" id="driverSubmitBtn">Add Driver</button>
+                                <button type="button" class="btn btn-secondary d-none" id="driverCancelBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>Current Drivers</h4>
+                        {% if drivers %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Name</th>
+                                        <th>Team</th>
+                                        <th>Category</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for driver in drivers %}
+                                    <tr>
+                                        <td>{{ driver.number }}</td>
+                                        <td>{{ driver.name }}</td>
+                                        <td>{{ driver.team.name }}</td>
+                                        <td>
+                                            <span class="badge {% if driver.team.is_top_team %}bg-success{% else %}bg-warning{% endif %}">
+                                                {% if driver.team.is_top_team %}Top{% else %}Bottom{% endif %}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary edit-driver" 
+                                                        data-id="{{ driver.id }}" data-name="{{ driver.name }}" 
+                                                        data-number="{{ driver.number }}" data-team-id="{{ driver.team_id }}">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger delete-driver" 
+                                                        data-id="{{ driver.id }}" data-name="{{ driver.name }}">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p>No drivers added yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Grand Prix Tab -->
+            <div class="tab-pane fade {% if active_tab == 'races' %}show active{% endif %}" id="races" role="tabpanel" aria-labelledby="races-tab">
+                <h3>Manage Grand Prix</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <form method="POST" id="gpForm">
+                            <input type="hidden" name="action" value="add_grand_prix" id="gpAction">
+                            <input type="hidden" name="gp_id" id="editGpId">
+                            <div class="mb-3">
+                                <label for="gp_name" class="form-label">Grand Prix Name</label>
+                                <input type="text" class="form-control" id="gp_name" name="gp_name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="gp_date" class="form-label">Date</label>
+                                <input type="date" class="form-control" id="gp_date" name="gp_date" required>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary" id="gpSubmitBtn">Add Grand Prix</button>
+                                <button type="button" class="btn btn-secondary d-none" id="gpCancelBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-md-6">
+                        <h4>Race Calendar</h4>
+                        {% if races %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Grand Prix</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for race in races %}
+                                    <tr>
+                                        <td>{{ race.name }}</td>
+                                        <td>{{ race.date.strftime('%d %B %Y') }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary edit-gp" 
+                                                        data-id="{{ race.id }}" data-name="{{ race.name }}" 
+                                                        data-date="{{ race.date.strftime('%Y-%m-%d') }}">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger delete-gp" 
+                                                        data-id="{{ race.id }}" data-name="{{ race.name }}">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p>No races added yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Points Mapping Tab -->
+            <div class="tab-pane fade {% if active_tab == 'points' %}show active{% endif %}" id="points" role="tabpanel" aria-labelledby="points-tab">
+                <h3>Points Mapping</h3>
+                <form method="POST">
+                    <input type="hidden" name="action" value="update_points_mapping">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Position</th>
+                                    <th>Points</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(1, 21) %}
+                                <tr>
+                                    <td>{{ i }}</td>
+                                    <td>
+                                        <input type="number" class="form-control" name="points_{{ i }}" value="{{ points_mapping.get(i, 0) }}" min="0">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Points Mapping</button>
+                </form>
+            </div>
+            
+            <!-- Race Results Tab -->
+            <div class="tab-pane fade {% if active_tab == 'results' %}show active{% endif %}" id="results" role="tabpanel" aria-labelledby="results-tab">
+                <h3>Race Results</h3>
+                <div class="row">
+                    <div class="col-md-12">
+                        <form method="POST" id="raceResultForm">
+                            <input type="hidden" name="action" value="add_race_result">
+                            <div class="mb-3">
+                                <label for="gp_id" class="form-label">Select Grand Prix</label>
+                                <select class="form-select" id="gp_id" name="gp_id" required>
+                                    <option value="">Select Grand Prix</option>
+                                    {% for race in races %}
+                                    <option value="{{ race.id }}" {% if races_with_results.get(race.id, False) %}class="text-success fw-bold" style="background-color: #e8f5e9;"{% endif %}>
+                                        {{ race.name }} ({{ race.date.strftime('%d %B %Y') }})
+                                        {% if races_with_results.get(race.id, False) %}
+                                        [Results Entered]
+                                        {% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div id="driversPositions" class="d-none">
+                                <h4>Enter Driver Positions</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Driver</th>
+                                                <th>Team</th>
+                                                <th>Position</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for driver in drivers %}
+                                            <tr>
+                                                <td>{{ driver.name }} ({{ driver.number }})</td>
+                                                <td>{{ driver.team.name }}</td>
+                                                <td>
+                                                    <input type="number" class="form-control position-input" name="driver_{{ driver.id }}" min="1" max="20">
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Race Results</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Password Tab -->
+            <div class="tab-pane fade {% if active_tab == 'password' %}show active{% endif %}" id="password" role="tabpanel" aria-labelledby="password-tab">
+                <h3>Change Password</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <form method="POST">
+                            <input type="hidden" name="action" value="change_password">
+                            <div class="mb-3">
+                                <label for="new_password" class="form-label">New Password</label>
+                                <input type="password" class="form-control" id="new_password" name="new_password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirm_password" class="form-label">Confirm Password</label>
+                                <input type="password" class="form-control" id="confirm_password" required>
+                                <div id="passwordMismatch" class="invalid-feedback">
+                                    Passwords do not match!
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="changePasswordBtn">Change Password</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // ===== User Management =====
+        // Edit User
+        const editUserBtns = document.querySelectorAll('.edit-user');
+        const userForm = document.getElementById('userForm');
+        const userAction = document.getElementById('userAction');
+        const editUserId = document.getElementById('editUserId');
+        const userName = document.getElementById('name');
+        const userSubmitBtn = document.getElementById('userSubmitBtn');
+        const userCancelBtn = document.getElementById('userCancelBtn');
+        
+        editUserBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.dataset.id;
+                const name = this.dataset.name;
+                
+                userAction.value = 'edit_user';
+                editUserId.value = userId;
+                userName.value = name;
+                userSubmitBtn.textContent = 'Update User';
+                userCancelBtn.classList.remove('d-none');
+                
+                // Scroll to form
+                userForm.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+        
+        // Delete User
+        const deleteUserBtns = document.querySelectorAll('.delete-user');
+        
+        deleteUserBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.dataset.id;
+                const name = this.dataset.name;
+                
+                if (confirm(`Are you sure you want to delete user ${name}? This action cannot be undone.`)) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.innerHTML = `
+                        <input type="hidden" name="action" value="delete_user">
+                        <input type="hidden" name="user_id" value="${userId}">
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+        
+        // Cancel User Edit
+        if (userCancelBtn) {
+            userCancelBtn.addEventListener('click', function() {
+                userAction.value = 'add_user';
+                editUserId.value = '';
+                userName.value = '';
+                userSubmitBtn.textContent = 'Add User';
+                userCancelBtn.classList.add('d-none');
+            });
+        }
+        
+        // ===== Team Management =====
+        // Edit Team
+        const editTeamBtns = document.querySelectorAll('.edit-team');
+        const teamForm = document.getElementById('teamForm');
+        const teamAction = document.getElementById('teamAction');
+        const editTeamId = document.getElementById('editTeamId');
+        const teamName = document.getElementById('team_name');
+        const isTopTeam = document.getElementById('is_top_team');
+        const teamSubmitBtn = document.getElementById('teamSubmitBtn');
+        const teamCancelBtn = document.getElementById('teamCancelBtn');
+        
+        editTeamBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const teamId = this.dataset.id;
+                const name = this.dataset.name;
+                const isTop = this.dataset.isTop === 'true';
+                
+                teamAction.value = 'edit_team';
+                editTeamId.value = teamId;
+                teamName.value = name;
+                isTopTeam.checked = isTop;
+                teamSubmitBtn.textContent = 'Update Team';
+                teamCancelBtn.classList.remove('d-none');
+                
+                // Scroll to form
+                teamForm.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+        
+        // Delete Team
+        const deleteTeamBtns = document.querySelectorAll('.delete-team');
+        
+        deleteTeamBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const teamId = this.dataset.id;
+                const name = this.dataset.name;
+                
+                if (confirm(`Are you sure you want to delete team ${name}? This will also delete all associated drivers. This action cannot be undone.`)) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.innerHTML = `
+                        <input type="hidden" name="action" value="delete_team">
+                        <input type="hidden" name="team_id" value="${teamId}">
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+        
+        // Cancel Team Edit
+        if (teamCancelBtn) {
+            teamCancelBtn.addEventListener('click', function() {
+                teamAction.value = 'add_team';
+                editTeamId.value = '';
+                teamName.value = '';
+                isTopTeam.checked = false;
+                teamSubmitBtn.textContent = 'Add Team';
+                teamCancelBtn.classList.add('d-none');
+            });
+        }
+        
+        // ===== Driver Management =====
+        // Edit Driver
+        const editDriverBtns = document.querySelectorAll('.edit-driver');
+        const driverForm = document.getElementById('driverForm');
+        const driverAction = document.getElementById('driverAction');
+        const editDriverId = document.getElementById('editDriverId');
+        const driverName = document.getElementById('driver_name');
+        const driverNumber = document.getElementById('driver_number');
+        const teamId = document.getElementById('team_id');
+        const driverSubmitBtn = document.getElementById('driverSubmitBtn');
+        const driverCancelBtn = document.getElementById('driverCancelBtn');
+        
+        editDriverBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const driverId = this.dataset.id;
+                const name = this.dataset.name;
+                const number = this.dataset.number;
+                const teamIdValue = this.dataset.teamId;
+                
+                driverAction.value = 'edit_driver';
+                editDriverId.value = driverId;
+                driverName.value = name;
+                driverNumber.value = number;
+                teamId.value = teamIdValue;
+                driverSubmitBtn.textContent = 'Update Driver';
+                driverCancelBtn.classList.remove('d-none');
+                
+                // Scroll to form
+                driverForm.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+        
+        // Delete Driver
+        const deleteDriverBtns = document.querySelectorAll('.delete-driver');
+        
+        deleteDriverBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const driverId = this.dataset.id;
+                const name = this.dataset.name;
+                
+                if (confirm(`Are you sure you want to delete driver ${name}? This will also delete all associated selections and results. This action cannot be undone.`)) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.innerHTML = `
+                        <input type="hidden" name="action" value="delete_driver">
+                        <input type="hidden" name="driver_id" value="${driverId}">
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+        
+        // Cancel Driver Edit
+        if (driverCancelBtn) {
+            driverCancelBtn.addEventListener('click', function() {
+                driverAction.value = 'add_driver';
+                editDriverId.value = '';
+                driverName.value = '';
+                driverNumber.value = '';
+                teamId.value = '';
+                driverSubmitBtn.textContent = 'Add Driver';
+                driverCancelBtn.classList.add('d-none');
+            });
+        }
+        
+        // ===== Grand Prix Management =====
+        // Edit Grand Prix
+        const editGpBtns = document.querySelectorAll('.edit-gp');
+        const gpForm = document.getElementById('gpForm');
+        const gpAction = document.getElementById('gpAction');
+        const editGpId = document.getElementById('editGpId');
+        const gpName = document.getElementById('gp_name');
+        const gpDate = document.getElementById('gp_date');
+        const gpSubmitBtn = document.getElementById('gpSubmitBtn');
+        const gpCancelBtn = document.getElementById('gpCancelBtn');
+        
+        editGpBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const gpId = this.dataset.id;
+                const name = this.dataset.name;
+                const date = this.dataset.date;
+                
+                gpAction.value = 'edit_grand_prix';
+                editGpId.value = gpId;
+                gpName.value = name;
+                gpDate.value = date;
+                gpSubmitBtn.textContent = 'Update Grand Prix';
+                gpCancelBtn.classList.remove('d-none');
+                
+                // Scroll to form
+                gpForm.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+        
+        // Delete Grand Prix
+        const deleteGpBtns = document.querySelectorAll('.delete-gp');
+        
+        deleteGpBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const gpId = this.dataset.id;
+                const name = this.dataset.name;
+                
+                if (confirm(`Are you sure you want to delete Grand Prix ${name}? This will also delete all associated selections and results. This action cannot be undone.`)) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.innerHTML = `
+                        <input type="hidden" name="action" value="delete_grand_prix">
+                        <input type="hidden" name="gp_id" value="${gpId}">
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+        
+        // Cancel Grand Prix Edit
+        if (gpCancelBtn) {
+            gpCancelBtn.addEventListener('click', function() {
+                gpAction.value = 'add_grand_prix';
+                editGpId.value = '';
+                gpName.value = '';
+                gpDate.value = '';
+                gpSubmitBtn.textContent = 'Add Grand Prix';
+                gpCancelBtn.classList.add('d-none');
+            });
+        }
+        
+        // Show driver positions when a Grand Prix is selected
+        const gpSelect = document.getElementById('gp_id');
+        const driversPositions = document.getElementById('driversPositions');
+        
+        if (gpSelect) {
+            gpSelect.addEventListener('change', function() {
+                if (gpSelect.value) {
+                    driversPositions.classList.remove('d-none');
+                } else {
+                    driversPositions.classList.add('d-none');
+                }
+            });
+        }
+        
+        // Validate position inputs
+        const positionInputs = document.querySelectorAll('.position-input');
+        const usedPositions = new Set();
+        
+        positionInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                const position = parseInt(this.value);
+                
+                if (position < 1 || position > 20) {
+                    alert('Position must be between 1 and 20');
+                    this.value = '';
+                    return;
+                }
+                
+                // Check if position is already used
+                if (usedPositions.has(position)) {
+                    alert('Position ' + position + ' is already assigned to another driver');
+                    this.value = '';
+                    return;
+                }
+                
+                // Update used positions
+                usedPositions.clear();
+                positionInputs.forEach(inp => {
+                    if (inp.value) {
+                        usedPositions.add(parseInt(inp.value));
+                    }
+                });
+            });
+        });
+        
+        // Password confirmation validation
+        const newPassword = document.getElementById('new_password');
+        const confirmPassword = document.getElementById('confirm_password');
+        const passwordMismatch = document.getElementById('passwordMismatch');
+        const changePasswordBtn = document.getElementById('changePasswordBtn');
+        
+        if (newPassword && confirmPassword) {
+            function validatePassword() {
+                if (newPassword.value !== confirmPassword.value) {
+                    confirmPassword.classList.add('is-invalid');
+                    passwordMismatch.style.display = 'block';
+                    changePasswordBtn.disabled = true;
+                } else {
+                    confirmPassword.classList.remove('is-invalid');
+                    passwordMismatch.style.display = 'none';
+                    changePasswordBtn.disabled = false;
+                }
+            }
+            
+            newPassword.addEventListener('input', validatePassword);
+            confirmPassword.addEventListener('input', validatePassword);
+        }
+    });
+</script>
+{% endblock %}

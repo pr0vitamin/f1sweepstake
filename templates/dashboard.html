@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Dashboard</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Next Race</h3>
+            </div>
+            <div class="card-body">
+                {% if next_race %}
+                <h4>{{ next_race.name }}</h4>
+                <p>Date: {{ next_race.date.strftime('%d %B %Y') }}</p>
+                {% if not races_with_results.get(next_race.id, False) %}
+                <a href="{{ url_for('driver_picks', gp_id=next_race.id) }}" class="btn btn-primary">Make Driver Picks</a>
+                {% else %}
+                <a href="{{ url_for('race_results', gp_id=next_race.id) }}" class="btn btn-info">View Results</a>
+                {% endif %}
+                {% else %}
+                <p>No upcoming races scheduled.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0">Sweepstake Standings</h3>
+            </div>
+            <div class="card-body">
+                {% if users %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Position</th>
+                                <th>User</th>
+                                <th>Points</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr {% if loop.index == 1 %}style="background-color: #FFD700 !important; font-weight: bold;"{% elif loop.index == 2 %}style="background-color: #A9A9A9 !important; font-weight: bold;"{% elif loop.index == 3 %}style="background-color: #B87333 !important; font-weight: bold;"{% endif %}>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ user.name }}</td>
+                                <td>{{ user.points }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <a href="{{ url_for('leaderboard') }}" class="btn btn-success">View Full Leaderboard</a>
+                {% else %}
+                <p>No users added yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0">Race Calendar</h3>
+            </div>
+            <div class="card-body">
+                {% set races = grand_prix_list if grand_prix_list else [] %}
+                {% if races %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Grand Prix</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for race in races %}
+                            <tr>
+                                <td>{{ race.name }}</td>
+                                <td>{{ race.date.strftime('%d %B %Y') }}</td>
+                                <td>
+                                    {% if races_with_results.get(race.id, False) %}
+                                    <a href="{{ url_for('race_results', gp_id=race.id) }}" class="btn btn-sm btn-info">Results</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p>No races added yet. Go to the Configuration page to add races.</p>
+                <a href="{{ url_for('config') }}" class="btn btn-primary">Go to Configuration</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
