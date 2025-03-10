@@ -677,4 +677,4 @@ if __name__ == '__main__':
     with app.app_context():
         initialize_database()
     if 'liveconsole' not in gethostname(): # check if running on PythonAnywhere
-    app.run()
+        app.run()
