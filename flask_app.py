@@ -110,8 +110,6 @@ class Config(db.Model):
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Debug: Print session information in decorator
-        print(f"Login check - Session authenticated: {session.get('authenticated')}")
         if 'authenticated' not in session or not session['authenticated']:
             return redirect(url_for('login'))
         return f(*args, **kwargs)
@@ -152,8 +150,6 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Debug: Print session information
-    print(f"Session authenticated: {session.get('authenticated')}")
     # Get the next upcoming race that doesn't have results yet
     # First, find all Grand Prix IDs that have race results
     completed_gp_ids = [result.grand_prix_id for result in RaceResult.query.distinct(RaceResult.grand_prix_id).all()]
