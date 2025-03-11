@@ -39,6 +39,7 @@
                         <label for="top_driver_id" class="form-label">Select Top Team Driver</label>
                         <select class="form-select" id="top_driver_id" name="top_driver_id" required disabled>
                             <option value="">Select Driver</option>
+                            <option value="none">Not selected</option>
                             {% for driver in top_drivers %}
                             <option value="{{ driver.id }}" {% if driver.id in selected_drivers %}disabled{% endif %}>
                                 {{ driver.name }} ({{ driver.number }}) - {{ driver.team.name }}
@@ -47,7 +48,9 @@
                         </select>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary" id="topSubmitBtn" disabled {% if results_exist %}disabled{% endif %}>Save Top Driver Selection</button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" id="topSubmitBtn" disabled {% if results_exist %}disabled{% endif %}>Save Top Driver Selection</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -81,6 +84,7 @@
                         <label for="bottom_driver_id" class="form-label">Select Bottom Team Driver</label>
                         <select class="form-select" id="bottom_driver_id" name="bottom_driver_id" required disabled>
                             <option value="">Select Driver</option>
+                            <option value="none">Not selected</option>
                             {% for driver in bottom_drivers %}
                             <option value="{{ driver.id }}" {% if driver.id in selected_drivers %}disabled{% endif %}>
                                 {{ driver.name }} ({{ driver.number }}) - {{ driver.team.name }}
@@ -89,7 +93,9 @@
                         </select>
                     </div>
                     
-                    <button type="submit" class="btn btn-success" id="bottomSubmitBtn" disabled {% if results_exist %}disabled{% endif %}>Save Bottom Driver Selection</button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success" id="bottomSubmitBtn" disabled {% if results_exist %}disabled{% endif %}>Save Bottom Driver Selection</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -183,11 +189,13 @@
         
         // Check if top driver is selected to enable submit button
         topDriverSelect.addEventListener('change', function() {
+            // Enable submit button if any value is selected (including "none")
             topSubmitBtn.disabled = !this.value;
         });
         
         // Check if bottom driver is selected to enable submit button
         bottomDriverSelect.addEventListener('change', function() {
+            // Enable submit button if any value is selected (including "none")
             bottomSubmitBtn.disabled = !this.value;
         });
         
@@ -225,7 +233,7 @@
             
             // Reset selection if no existing selection
             if (!hasTopSelection) {
-                topDriverSelect.value = '';
+                topDriverSelect.value = 'none';
             }
         }
         
@@ -263,7 +271,7 @@
             
             // Reset selection if no existing selection
             if (!hasBottomSelection) {
-                bottomDriverSelect.value = '';
+                bottomDriverSelect.value = 'none';
             }
         }
     });

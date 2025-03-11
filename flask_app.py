@@ -437,7 +437,7 @@ def driver_picks(gp_id):
         selection_type = request.form.get('selection_type')
         
         if user_id:
-            if selection_type == 'top' and top_driver_id:
+            if selection_type == 'top':
                 # Delete existing top team selection for this user and GP
                 # First find the selections to delete
                 top_selections = DriverSelection.query.join(Driver).join(Team).filter(
@@ -450,19 +450,23 @@ def driver_picks(gp_id):
                 for selection in top_selections:
                     db.session.delete(selection)
                 
-                # Add new top team selection
-                top_selection = DriverSelection(
-                    user_id=int(user_id),
-                    driver_id=int(top_driver_id),
-                    grand_prix_id=gp_id
-                )
-                db.session.add(top_selection)
-                db.session.commit()
+                # Add new top team selection only if a valid driver was selected
+                if top_driver_id and top_driver_id != 'none':
+                    top_selection = DriverSelection(
+                        user_id=int(user_id),
+                        driver_id=int(top_driver_id),
+                        grand_prix_id=gp_id
+                    )
+                    db.session.add(top_selection)
+                    db.session.commit()
+                    flash('Top team driver selection saved successfully!', 'success')
+                else:
+                    db.session.commit()
+                    flash('Top team driver selection removed.', 'success')
                 
-                flash('Top team driver selection saved successfully!', 'success')
                 return redirect(url_for('driver_picks', gp_id=gp_id))
                 
-            elif selection_type == 'bottom' and bottom_driver_id:
+            elif selection_type == 'bottom':
                 # Delete existing bottom team selection for this user and GP
                 # First find the selections to delete
                 bottom_selections = DriverSelection.query.join(Driver).join(Team).filter(
@@ -475,16 +479,20 @@ def driver_picks(gp_id):
                 for selection in bottom_selections:
                     db.session.delete(selection)
                 
-                # Add new bottom team selection
-                bottom_selection = DriverSelection(
-                    user_id=int(user_id),
-                    driver_id=int(bottom_driver_id),
-                    grand_prix_id=gp_id
-                )
-                db.session.add(bottom_selection)
-                db.session.commit()
+                # Add new bottom team selection only if a valid driver was selected
+                if bottom_driver_id and bottom_driver_id != 'none':
+                    bottom_selection = DriverSelection(
+                        user_id=int(user_id),
+                        driver_id=int(bottom_driver_id),
+                        grand_prix_id=gp_id
+                    )
+                    db.session.add(bottom_selection)
+                    db.session.commit()
+                    flash('Bottom team driver selection saved successfully!', 'success')
+                else:
+                    db.session.commit()
+                    flash('Bottom team driver selection removed.', 'success')
                 
-                flash('Bottom team driver selection saved successfully!', 'success')
                 return redirect(url_for('driver_picks', gp_id=gp_id))
     
     # Get data for the driver picks page
