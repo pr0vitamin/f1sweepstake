@@ -1,6 +1,6 @@
-# Gallagher F1 Sweepstake
+# F1 Sweepstake App
 
-A web application for managing a Formula 1 sweepstakes competition among friends.
+A web application for managing a Formula 1 sweepstake competition among friends.
 
 ## Features
 
@@ -21,8 +21,8 @@ A web application for managing a Formula 1 sweepstakes competition among friends
 
 1. Clone the repository:
 ```
-git clone https://github.com/yourusername/f1-sweepstakes.git
-cd f1-sweepstakes
+git clone https://github.com/pr0vitamin/f1sweepstake.git
+cd f1sweepstake
 ```
 
 2. Create a virtual environment and install dependencies:
@@ -48,7 +48,7 @@ python flask_app.py
 
 1. On first login, you'll be prompted to set a password for the application.
 2. After logging in, go to the Configuration page to:
-   - Add users participating in the sweepstakes
+   - Add users participating in the sweepstake
    - Add the top 5 and bottom 5 F1 teams
    - Add drivers for each team
    - Add Grand Prix events with their dates
