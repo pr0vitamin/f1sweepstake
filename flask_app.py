@@ -170,11 +170,38 @@ def dashboard():
     for race in grand_prix_list:
         races_with_results[race.id] = RaceResult.query.filter_by(grand_prix_id=race.id).first() is not None
     
+    # Get driver selections for the next race if it exists
+    user_picks = {}
+    if next_race:
+        # Initialize user picks dictionary
+        for user in users:
+            user_picks[user.id] = {
+                'name': user.name,
+                'top_driver': None,
+                'bottom_driver': None
+            }
+            
+        # Get existing selections for this GP with driver and team information
+        selections = DriverSelection.query.filter_by(grand_prix_id=next_race.id).options(
+            db.joinedload(DriverSelection.driver).joinedload(Driver.team),
+            db.joinedload(DriverSelection.user)
+        ).all()
+        
+        # Fill in the driver selections
+        for selection in selections:
+            if selection.driver.team.is_top_team:
+                if selection.user_id in user_picks:
+                    user_picks[selection.user_id]['top_driver'] = selection.driver.name
+            else:
+                if selection.user_id in user_picks:
+                    user_picks[selection.user_id]['bottom_driver'] = selection.driver.name
+    
     return render_template('dashboard.html', 
                           next_race=next_race, 
                           users=users, 
                           grand_prix_list=grand_prix_list,
-                          races_with_results=races_with_results)
+                          races_with_results=races_with_results,
+                          user_picks=user_picks)
 
 @app.route('/config', methods=['GET', 'POST'])
 @login_required
