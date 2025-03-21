@@ -21,18 +21,12 @@
             </div>
             <div class="card-body">
                 <p class="lead">Users will make their driver selections in the following order:</p>
-                <div class="d-flex flex-wrap gap-2 mb-3">
-                    {% for user in pick_order %}
-                        <div class="badge bg-primary text-white fs-6 p-2">
-                            {{ loop.index }}. {{ user.name }}
-                        </div>
-                    {% endfor %}
-                    
-                    {% for user in pick_order|reverse %}
-                        <div class="badge bg-success text-white fs-6 p-2">
-                            {{ pick_order|length + loop.index }}. {{ user.name }}
-                        </div>
-                    {% endfor %}
+                
+                {% set top_picks_count = user_top_drivers|length %}
+                {% set bottom_picks_count = user_bottom_drivers|length %}
+                {% set all_top_picks_made = top_picks_count == pick_order|length %}
+                
+                <div id="pickOrderContainer" class="d-flex flex-wrap gap-2 mb-3">
                 </div>
                 <!-- Hidden textarea for copy functionality -->
                 <textarea id="copyPickOrderText" style="position: absolute; left: -9999px;" readonly>Pick order for {{ grand_prix.name }}:
@@ -56,9 +50,11 @@ Bottom Team Driver Picks:
                     <strong>Note:</strong> After all users have made their first pick (numbers 1-{{ pick_order|length }}), 
                     the order reverses for the second pick (numbers {{ pick_order|length + 1 }}-{{ pick_order|length * 2 }}).
                     <br><br>
-                    <span class="badge bg-primary text-white">Blue</span> = Top Team Driver picks (first round)
+                    <span class="badge bg-warning text-dark">Yellow</span> = Users who have not made their picks
                     <br>
-                    <span class="badge bg-success text-white">Green</span> = Bottom Team Driver picks (second round)
+                    <span class="badge bg-danger text-white">Red</span> = Next user to pick
+                    <br>
+                    <span class="badge bg-secondary text-white">Gray</span> = Users who have already made their picks
                 </div>
             </div>
         </div>
@@ -214,132 +210,249 @@ Bottom Team Driver Picks:
         const copyPickOrderBtn = document.getElementById('copyPickOrderBtn');
         const copyPickOrderText = document.getElementById('copyPickOrderText');
         
-        // Store current selections
-        const userSelections = {{ user_selections|tojson|safe }};
-        const selectedDrivers = {{ selected_drivers|tojson|safe }};
+        // Get data from the server
+        const userSelections = JSON.parse('{{ user_selections|tojson|safe }}');
+        const selectedDrivers = JSON.parse('{{ selected_drivers|tojson|safe }}');
+        const pickOrderData = JSON.parse('{{ pick_order_data|tojson|safe }}');
+        const userTopDriverIds = JSON.parse('{{ user_top_driver_ids|tojson|safe }}');
+        const userBottomDriverIds = JSON.parse('{{ user_bottom_driver_ids|tojson|safe }}');
         
-        // Enable top driver select when user is selected
-        userSelectTop.addEventListener('change', function() {
-            const userId = parseInt(this.value);
+        // Find the next user to pick
+        function findNextUserToPick() {
+            // Check if all top picks are made
+            const allTopPicksMade = userTopDriverIds.length === pickOrderData.length;
             
-            if (userId) {
-                topDriverSelect.disabled = false;
-                updateTopDriverOptions(userId);
-            } else {
-                topDriverSelect.disabled = true;
-                topSubmitBtn.disabled = true;
-            }
-        });
-        
-        // Enable bottom driver select when user is selected
-        userSelectBottom.addEventListener('change', function() {
-            const userId = parseInt(this.value);
-            
-            if (userId) {
-                bottomDriverSelect.disabled = false;
-                updateBottomDriverOptions(userId);
-            } else {
-                bottomDriverSelect.disabled = true;
-                bottomSubmitBtn.disabled = true;
-            }
-        });
-        
-        // Check if top driver is selected to enable submit button
-        topDriverSelect.addEventListener('change', function() {
-            // Enable submit button if any value is selected (including "none")
-            topSubmitBtn.disabled = !this.value;
-        });
-        
-        // Check if bottom driver is selected to enable submit button
-        bottomDriverSelect.addEventListener('change', function() {
-            // Enable submit button if any value is selected (including "none")
-            bottomSubmitBtn.disabled = !this.value;
-        });
-        
-        // Update top driver options based on user's current selections
-        function updateTopDriverOptions(userId) {
-            // Get current user's selections
-            const userDrivers = userSelections[userId] || [];
-            
-            // Reset options
-            for (const option of topDriverSelect.options) {
-                if (option.value) {
-                    option.disabled = (selectedDrivers.includes(parseInt(option.value)) && 
-                                     !userDrivers.includes(parseInt(option.value)));
-                }
-            }
-            
-            // Set current selection if it exists
-            let hasTopSelection = false;
-            if (userDrivers.length > 0) {
-                for (const driverId of userDrivers) {
-                    // Check if this is a top team driver
-                    for (const option of topDriverSelect.options) {
-                        if (parseInt(option.value) === driverId) {
-                            topDriverSelect.value = driverId;
-                            hasTopSelection = true;
-                            break;
-                        }
+            if (!allTopPicksMade) {
+                // Find the first user who hasn't made a top pick yet
+                for (const user of pickOrderData) {
+                    if (!userTopDriverIds.includes(user.id)) {
+                        return {
+                            userId: user.id,
+                            isTopPick: true
+                        };
                     }
-                    if (hasTopSelection) break;
+                }
+            } else {
+                // All top picks are made, check bottom picks
+                // Bottom picks are in reverse order
+                const reversedPickOrder = [...pickOrderData].reverse();
+                for (const user of reversedPickOrder) {
+                    if (!userBottomDriverIds.includes(user.id)) {
+                        return {
+                            userId: user.id,
+                            isTopPick: false
+                        };
+                    }
                 }
             }
             
-            // Enable submit button if driver is selected
-            topSubmitBtn.disabled = !topDriverSelect.value;
+            // If all picks are made, return null
+            return null;
+        }
+        
+        // Pre-select the next user to pick
+        function preSelectNextUser() {
+            const nextUser = findNextUserToPick();
             
-            // Reset selection if no existing selection
-            if (!hasTopSelection) {
-                topDriverSelect.value = 'none';
+            if (nextUser) {
+                if (nextUser.isTopPick) {
+                    // Pre-select the user in the top driver form
+                    if (userSelectTop) {
+                        userSelectTop.value = nextUser.userId;
+                        // Trigger change event to update available drivers
+                        const event = new Event('change');
+                        userSelectTop.dispatchEvent(event);
+                    }
+                } else {
+                    // Pre-select the user in the bottom driver form
+                    if (userSelectBottom) {
+                        userSelectBottom.value = nextUser.userId;
+                        // Trigger change event to update available drivers
+                        const event = new Event('change');
+                        userSelectBottom.dispatchEvent(event);
+                    }
+                }
             }
         }
         
-        // Update bottom driver options based on user's current selections
-        function updateBottomDriverOptions(userId) {
-            // Get current user's selections
+        // Update the pick order display
+        function updatePickOrderDisplay() {
+            const pickOrderContainer = document.getElementById('pickOrderContainer');
+            if (!pickOrderContainer) return;
+            
+            let html = '';
+            
+            // First round (top team drivers)
+            html += '<div class="mb-3"><strong>First Round (Top Team Drivers):</strong></div>';
+            html += '<div class="d-flex flex-wrap mb-4">';
+            
+            for (const user of pickOrderData) {
+                const hasTopPick = userTopDriverIds.includes(user.id);
+                const isNextTopPick = !hasTopPick && userTopDriverIds.length === pickOrderData.indexOf(user);
+                
+                let badgeClass = 'bg-warning'; // Yellow for users who haven't picked yet
+                let checkmark = '';
+                
+                if (hasTopPick) {
+                    badgeClass = 'bg-secondary'; // Gray for users who have picked
+                    checkmark = ' ✓';
+                } else if (isNextTopPick) {
+                    badgeClass = 'bg-danger'; // Red for next user to pick
+                }
+                
+                html += `<span class="badge ${badgeClass} me-2 mb-2 p-2">${user.name}${checkmark}</span>`;
+            }
+            
+            html += '</div>';
+            
+            // Second round (bottom team drivers) - reverse order
+            html += '<div class="mb-3"><strong>Second Round (Bottom Team Drivers):</strong></div>';
+            html += '<div class="d-flex flex-wrap">';
+            
+            const reversedPickOrder = [...pickOrderData].reverse();
+            
+            for (const user of reversedPickOrder) {
+                const hasBottomPick = userBottomDriverIds.includes(user.id);
+                const allTopPicksMade = userTopDriverIds.length === pickOrderData.length;
+                const bottomPicksMade = userBottomDriverIds.length;
+                const isNextBottomPick = allTopPicksMade && !hasBottomPick && bottomPicksMade === reversedPickOrder.indexOf(user);
+                
+                let badgeClass = 'bg-warning'; // Yellow for users who haven't picked yet
+                let checkmark = '';
+                
+                if (hasBottomPick) {
+                    badgeClass = 'bg-secondary'; // Gray for users who have picked
+                    checkmark = ' ✓';
+                } else if (isNextBottomPick) {
+                    badgeClass = 'bg-danger'; // Red for next user to pick
+                }
+                
+                html += `<span class="badge ${badgeClass} me-2 mb-2 p-2">${user.name}${checkmark}</span>`;
+            }
+            
+            html += '</div>';
+            
+            pickOrderContainer.innerHTML = html;
+        }
+        
+        // Initialize the page
+        function init() {
+            // Update the pick order display
+            updatePickOrderDisplay();
+            
+            // Pre-select the next user
+            preSelectNextUser();
+            
+            // Set up event listeners for user selection changes
+            if (userSelectTop) {
+                userSelectTop.addEventListener('change', function() {
+                    updateAvailableDrivers('top');
+                });
+            }
+            
+            if (userSelectBottom) {
+                userSelectBottom.addEventListener('change', function() {
+                    updateAvailableDrivers('bottom');
+                });
+            }
+            
+            // Set up copy pick order button
+            if (copyPickOrderBtn) {
+                copyPickOrderBtn.addEventListener('click', function() {
+                    copyPickOrder();
+                });
+            }
+            
+            // Initial update of available drivers
+            updateAvailableDrivers('top');
+            updateAvailableDrivers('bottom');
+        }
+        
+        // Update available drivers based on user selection
+        function updateAvailableDrivers(type) {
+            const userSelect = type === 'top' ? userSelectTop : userSelectBottom;
+            const driverSelect = type === 'top' ? topDriverSelect : bottomDriverSelect;
+            
+            if (!userSelect || !driverSelect) return;
+            
+            const userId = userSelect.value;
+            if (!userId) {
+                driverSelect.disabled = true;
+                return;
+            }
+            
+            // Enable the driver select
+            driverSelect.disabled = false;
+            
+            // Get current user's selections - use string key
             const userDrivers = userSelections[userId] || [];
             
-            // Reset options
-            for (const option of bottomDriverSelect.options) {
-                if (option.value) {
-                    option.disabled = (selectedDrivers.includes(parseInt(option.value)) && 
-                                     !userDrivers.includes(parseInt(option.value)));
+            // Enable/disable submit button based on whether user has already picked
+            const submitBtn = type === 'top' ? topSubmitBtn : bottomSubmitBtn;
+            const hasAlreadyPicked = type === 'top' 
+                ? userTopDriverIds.includes(parseInt(userId))
+                : userBottomDriverIds.includes(parseInt(userId));
+            
+            // Reset options - enable all options first
+            for (const option of driverSelect.options) {
+                if (option.value && option.value !== 'none') {
+                    // Disable the option if it's already selected by another user
+                    // But enable it if it's selected by the current user
+                    const driverId = parseInt(option.value);
+                    option.disabled = (selectedDrivers.includes(driverId) && 
+                                     !userDrivers.includes(driverId));
                 }
             }
             
             // Set current selection if it exists
-            let hasBottomSelection = false;
+            let hasSelection = false;
             if (userDrivers.length > 0) {
                 for (const driverId of userDrivers) {
-                    // Check if this is a bottom team driver
-                    for (const option of bottomDriverSelect.options) {
-                        if (parseInt(option.value) === driverId) {
-                            bottomDriverSelect.value = driverId;
-                            hasBottomSelection = true;
+                    // Check if this is a driver of the correct type (top/bottom)
+                    for (const option of driverSelect.options) {
+                        if (option.value && parseInt(option.value) === driverId) {
+                            driverSelect.value = driverId;
+                            hasSelection = true;
                             break;
                         }
                     }
-                    if (hasBottomSelection) break;
+                    if (hasSelection) break;
                 }
             }
             
-            // Enable submit button if driver is selected
-            bottomSubmitBtn.disabled = !bottomDriverSelect.value;
+            // Enable submit button if user is selected
+            submitBtn.disabled = false;
             
             // Reset selection if no existing selection
-            if (!hasBottomSelection) {
-                bottomDriverSelect.value = 'none';
+            if (!hasSelection) {
+                driverSelect.value = '';
             }
         }
         
         // Copy pick order to clipboard
-        copyPickOrderBtn.addEventListener('click', function() {
-            try {
-                copyPickOrderText.select();
-                document.execCommand('copy');
-                
-                // Show success message
+        function copyPickOrder() {
+            let text = "F1 Sweepstake Pick Order\n\n";
+            
+            // First round
+            text += "First Round (Top Team Drivers):\n";
+            pickOrderData.forEach((user, index) => {
+                text += `${index + 1}. ${user.name}\n`;
+            });
+            
+            text += "\n";
+            
+            // Second round
+            text += "Second Round (Bottom Team Drivers):\n";
+            [...pickOrderData].reverse().forEach((user, index) => {
+                text += `${index + 1}. ${user.name}\n`;
+            });
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(text).then(() => {
+                // Store original button text and style
                 const originalText = copyPickOrderBtn.innerHTML;
+                
+                // Update button to show success
                 copyPickOrderBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
                 copyPickOrderBtn.classList.add('btn-success');
                 copyPickOrderBtn.classList.remove('btn-dark');
@@ -350,10 +463,26 @@ Bottom Team Driver Picks:
                     copyPickOrderBtn.classList.remove('btn-success');
                     copyPickOrderBtn.classList.add('btn-dark');
                 }, 2000);
-            } catch (error) {
-                alert('Error copying to clipboard. Please try again.');
-            }
-        });
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                
+                // Show error on button
+                const originalText = copyPickOrderBtn.innerHTML;
+                copyPickOrderBtn.innerHTML = '<i class="fas fa-times"></i> Failed!';
+                copyPickOrderBtn.classList.add('btn-danger');
+                copyPickOrderBtn.classList.remove('btn-dark');
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    copyPickOrderBtn.innerHTML = originalText;
+                    copyPickOrderBtn.classList.remove('btn-danger');
+                    copyPickOrderBtn.classList.add('btn-dark');
+                }, 2000);
+            });
+        }
+        
+        // Initialize the page
+        init();
     });
-</script>
+    </script>
 {% endblock %}

@@ -699,10 +699,11 @@ def driver_picks(gp_id):
     user_bottom_drivers = {}
     
     for selection in selections:
-        # For JavaScript
-        if selection.user_id not in user_selections:
-            user_selections[selection.user_id] = []
-        user_selections[selection.user_id].append(selection.driver_id)
+        # For JavaScript - convert user_id to string to ensure proper JSON serialization
+        user_id_str = str(selection.user_id)
+        if user_id_str not in user_selections:
+            user_selections[user_id_str] = []
+        user_selections[user_id_str].append(selection.driver_id)
         
         # For template display
         if selection.driver.team.is_top_team:
@@ -716,6 +717,13 @@ def driver_picks(gp_id):
     # Get pick order
     pick_order = get_pick_order(gp_id)
     
+    # Create serializable pick order data
+    pick_order_data = [{'id': user.id, 'name': user.name} for user in pick_order]
+    
+    # Create serializable user top and bottom driver IDs
+    user_top_driver_ids = list(user_top_drivers.keys())
+    user_bottom_driver_ids = list(user_bottom_drivers.keys())
+    
     return render_template(
         'driver_picks.html',
         grand_prix=grand_prix,
@@ -728,9 +736,12 @@ def driver_picks(gp_id):
         user_selections=user_selections,
         user_top_drivers=user_top_drivers,
         user_bottom_drivers=user_bottom_drivers,
+        user_top_driver_ids=user_top_driver_ids,
+        user_bottom_driver_ids=user_bottom_driver_ids,
         selections=selections,
         results_exist=results_exist,
-        pick_order=pick_order
+        pick_order=pick_order,
+        pick_order_data=pick_order_data
     )
 
 @app.route('/results/<int:gp_id>')
