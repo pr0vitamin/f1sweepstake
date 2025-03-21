@@ -33,7 +33,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for user in users %}
+                                {% for user in pick_order %}
                                 {% set pick = user_picks.get(user.id, {}) %}
                                 <tr>
                                     <td>{{ user.name }}</td>

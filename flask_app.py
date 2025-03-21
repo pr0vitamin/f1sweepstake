@@ -5,6 +5,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request, ses
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
+import random
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -77,13 +78,23 @@ class DriverSelection(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     driver_id = db.Column(db.Integer, db.ForeignKey('driver.id'), nullable=False)
     grand_prix_id = db.Column(db.Integer, db.ForeignKey('grand_prix.id'), nullable=False)
-    
     user = db.relationship('User', backref=db.backref('selections', lazy=True))
     driver = db.relationship('Driver', backref=db.backref('selections', lazy=True))
     grand_prix = db.relationship('GrandPrix', backref=db.backref('selections', lazy=True))
     
     def __repr__(self):
-        return f'<DriverSelection {self.user.name} - {self.driver.name} for {self.grand_prix.name}>'
+        return f'<DriverSelection {self.user.name} - {self.driver.name} - {self.grand_prix.name}>'
+
+class PickOrder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    grand_prix_id = db.Column(db.Integer, db.ForeignKey('grand_prix.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+    grand_prix = db.relationship('GrandPrix', backref=db.backref('pick_orders', lazy=True))
+    user = db.relationship('User', backref=db.backref('pick_orders', lazy=True))
+    
+    def __repr__(self):
+        return f'<PickOrder {self.grand_prix.name} - {self.user.name} - Position {self.position}>'
 
 class Config(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -117,10 +128,9 @@ def login_required(f):
 
 # Routes
 @app.route('/')
+@login_required
 def index():
-    if 'authenticated' in session and session['authenticated']:
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
+    return redirect(url_for('dashboard'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -150,44 +160,42 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Get the next upcoming race that doesn't have results yet
-    # First, find all Grand Prix IDs that have race results
-    completed_gp_ids = [result.grand_prix_id for result in RaceResult.query.distinct(RaceResult.grand_prix_id).all()]
-    
-    # Then find the next race that isn't in the completed list
-    next_race = GrandPrix.query.filter(
-        ~GrandPrix.id.in_(completed_gp_ids) if completed_gp_ids else True
-    ).order_by(GrandPrix.date).first()
-    
-    # Get all users
+    # Get all users ordered by points
     users = User.query.order_by(User.points.desc()).all()
     
-    # Get all races for the race calendar
+    # Get all races
     grand_prix_list = GrandPrix.query.order_by(GrandPrix.date).all()
     
-    # Create a dictionary to track which races have results
-    races_with_results = {}
-    for race in grand_prix_list:
-        races_with_results[race.id] = RaceResult.query.filter_by(grand_prix_id=race.id).first() is not None
+    # Find the next race
+    next_race = None
+    current_date = datetime.now()
+    for gp in grand_prix_list:
+        if gp.date > current_date:
+            next_race = gp
+            break
     
-    # Get driver selections for the next race if it exists
+    # Check which races have results
+    races_with_results = {}
+    for gp in grand_prix_list:
+        has_results = RaceResult.query.filter_by(grand_prix_id=gp.id).first() is not None
+        races_with_results[gp.id] = has_results
+    
+    # Get user picks for the next race
     user_picks = {}
     if next_race:
-        # Initialize user picks dictionary
+        # Get pick order for the next race
+        pick_order = get_pick_order(next_race.id)
+        
+        selections = DriverSelection.query.filter_by(grand_prix_id=next_race.id).options(
+            db.joinedload(DriverSelection.driver).joinedload(Driver.team)
+        ).all()
+        
         for user in users:
             user_picks[user.id] = {
-                'name': user.name,
                 'top_driver': None,
                 'bottom_driver': None
             }
-            
-        # Get existing selections for this GP with driver and team information
-        selections = DriverSelection.query.filter_by(grand_prix_id=next_race.id).options(
-            db.joinedload(DriverSelection.driver).joinedload(Driver.team),
-            db.joinedload(DriverSelection.user)
-        ).all()
         
-        # Fill in the driver selections
         for selection in selections:
             if selection.driver.team.is_top_team:
                 if selection.user_id in user_picks:
@@ -201,7 +209,8 @@ def dashboard():
                           users=users, 
                           grand_prix_list=grand_prix_list,
                           races_with_results=races_with_results,
-                          user_picks=user_picks)
+                          user_picks=user_picks,
+                          pick_order=pick_order if next_race else [])
 
 @app.route('/config', methods=['GET', 'POST'])
 @login_required
@@ -224,6 +233,7 @@ def config():
                 db.session.add(user)
                 db.session.commit()
                 flash(f'User {name} added successfully!', 'success')
+                reset_future_pick_orders()
         
         elif action == 'edit_user':
             user_id = request.form.get('user_id')
@@ -245,6 +255,7 @@ def config():
                     db.session.delete(user)
                     db.session.commit()
                     flash(f'User deleted successfully!', 'success')
+                    reset_future_pick_orders()
                 active_tab = 'users'
         
         # Team management
@@ -413,6 +424,7 @@ def config():
                 
                 # Update user points based on results
                 update_user_points()
+                reset_future_pick_orders()
                 
                 flash('Race results added successfully!', 'success')
                 active_tab = 'results'
@@ -439,6 +451,152 @@ def config():
         races_with_results=races_with_results,
         active_tab=active_tab
     )
+
+# Helper functions
+def get_pick_order(gp_id):
+    """
+    Determine the order in which users will make their driver picks.
+    The pick order is based on the points users scored in the last race (ascending).
+    If multiple users scored the same points, they are ordered randomly.
+    If there are no previous race results, the entire user pick order is random.
+    
+    Returns a list of user objects in the order they should pick.
+    """
+    # Check if pick order already exists for this GP
+    existing_pick_orders = PickOrder.query.filter_by(grand_prix_id=gp_id).order_by(PickOrder.position).all()
+    
+    if existing_pick_orders:
+        # Return users in the stored order
+        return [order.user for order in existing_pick_orders]
+    
+    # If no pick order exists, calculate it
+    users = User.query.all()
+    
+    # Find the previous race (if any)
+    current_gp = GrandPrix.query.get(gp_id)
+    if not current_gp:
+        # If GP not found, create random order
+        random.shuffle(users)
+        # Store the random order
+        save_pick_order(gp_id, users)
+        return users
+    
+    # Find the most recent completed race before the current one
+    previous_race = GrandPrix.query.filter(
+        GrandPrix.date < current_gp.date,
+        GrandPrix.id != gp_id
+    ).order_by(GrandPrix.date.desc()).first()
+    
+    if not previous_race or not RaceResult.query.filter_by(grand_prix_id=previous_race.id).first():
+        # If no previous race or no results for the previous race, create random order
+        random.shuffle(users)
+        # Store the random order
+        save_pick_order(gp_id, users)
+        return users
+    
+    # Calculate points for each user in the previous race
+    user_points = calculate_user_points_for_race(previous_race.id)
+    
+    # Group users by points
+    points_to_users = {}
+    for user in users:
+        points = user_points.get(user.id, 0)
+        if points not in points_to_users:
+            points_to_users[points] = []
+        points_to_users[points].append(user)
+    
+    # Randomize users with the same points
+    for points, user_list in points_to_users.items():
+        random.shuffle(user_list)
+    
+    # Create the final pick order (ascending by points)
+    pick_order = []
+    for points in sorted(points_to_users.keys()):
+        pick_order.extend(points_to_users[points])
+    
+    # Store the calculated order
+    save_pick_order(gp_id, pick_order)
+    
+    return pick_order
+
+def save_pick_order(gp_id, users):
+    """
+    Save the pick order to the database
+    """
+    # Delete any existing pick orders for this GP
+    PickOrder.query.filter_by(grand_prix_id=gp_id).delete()
+    
+    # Create new pick orders
+    for position, user in enumerate(users, 1):
+        pick_order = PickOrder(
+            grand_prix_id=gp_id,
+            user_id=user.id,
+            position=position
+        )
+        db.session.add(pick_order)
+    
+    db.session.commit()
+
+def update_user_points():
+    # Reset all user points
+    for user in User.query.all():
+        user.points = 0
+    
+    # Calculate points for each race and update users
+    for race in GrandPrix.query.all():
+        user_points = calculate_user_points_for_race(race.id)
+        for user_id, points in user_points.items():
+            user = User.query.get(user_id)
+            if user:
+                user.points += points
+    
+    db.session.commit()
+    
+    # Reset pick orders for all future races since standings have changed
+    reset_future_pick_orders()
+
+def reset_future_pick_orders():
+    """
+    Reset pick orders for all future races
+    This should be called when race results are updated or when users are added/deleted
+    """
+    current_date = datetime.now()
+    future_races = GrandPrix.query.filter(GrandPrix.date > current_date).all()
+    
+    for race in future_races:
+        # Delete existing pick orders for this race
+        PickOrder.query.filter_by(grand_prix_id=race.id).delete()
+    
+    db.session.commit()
+
+def calculate_user_points_for_race(gp_id):
+    user_points = {}
+    
+    # Get all user selections for this race
+    selections = DriverSelection.query.filter_by(grand_prix_id=gp_id).all()
+    
+    # Get race results
+    results = RaceResult.query.filter_by(grand_prix_id=gp_id).all()
+    if not results:
+        return user_points
+    
+    # Create a mapping of driver_id to position
+    driver_positions = {r.driver_id: r.position for r in results}
+    
+    # Get points mapping
+    points_mapping = {pm.position: pm.points for pm in PointsMapping.query.all()}
+    
+    # Calculate points for each user
+    for selection in selections:
+        if selection.user_id not in user_points:
+            user_points[selection.user_id] = 0
+        
+        if selection.driver_id in driver_positions:
+            position = driver_positions[selection.driver_id]
+            points = points_mapping.get(position, 0)
+            user_points[selection.user_id] += points
+    
+    return user_points
 
 @app.route('/driver-picks/<int:gp_id>', methods=['GET', 'POST'])
 @login_required
@@ -555,6 +713,9 @@ def driver_picks(gp_id):
     # Check if race results exist for this GP
     results_exist = RaceResult.query.filter_by(grand_prix_id=gp_id).first() is not None
     
+    # Get pick order
+    pick_order = get_pick_order(gp_id)
+    
     return render_template(
         'driver_picks.html',
         grand_prix=grand_prix,
@@ -568,7 +729,8 @@ def driver_picks(gp_id):
         user_top_drivers=user_top_drivers,
         user_bottom_drivers=user_bottom_drivers,
         selections=selections,
-        results_exist=results_exist
+        results_exist=results_exist,
+        pick_order=pick_order
     )
 
 @app.route('/results/<int:gp_id>')
@@ -646,51 +808,6 @@ def leaderboard():
         races=races,
         points_by_race=points_by_race
     )
-
-# Helper functions
-def update_user_points():
-    # Reset all user points
-    for user in User.query.all():
-        user.points = 0
-    
-    # Calculate points for each race and update users
-    for race in GrandPrix.query.all():
-        user_points = calculate_user_points_for_race(race.id)
-        for user_id, points in user_points.items():
-            user = User.query.get(user_id)
-            if user:
-                user.points += points
-    
-    db.session.commit()
-
-def calculate_user_points_for_race(gp_id):
-    user_points = {}
-    
-    # Get all user selections for this race
-    selections = DriverSelection.query.filter_by(grand_prix_id=gp_id).all()
-    
-    # Get race results
-    results = RaceResult.query.filter_by(grand_prix_id=gp_id).all()
-    if not results:
-        return user_points
-    
-    # Create a mapping of driver_id to position
-    driver_positions = {r.driver_id: r.position for r in results}
-    
-    # Get points mapping
-    points_mapping = {pm.position: pm.points for pm in PointsMapping.query.all()}
-    
-    # Calculate points for each user
-    for selection in selections:
-        if selection.user_id not in user_points:
-            user_points[selection.user_id] = 0
-        
-        if selection.driver_id in driver_positions:
-            position = driver_positions[selection.driver_id]
-            points = points_mapping.get(position, 0)
-            user_points[selection.user_id] += points
-    
-    return user_points
 
 # Initialize database with default data if needed
 def initialize_database():

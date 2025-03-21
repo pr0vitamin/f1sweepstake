@@ -11,6 +11,61 @@
 </div>
 
 <div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Pick Order</h3>
+                <button id="copyPickOrderBtn" class="btn btn-sm btn-dark">
+                    <i class="fas fa-copy"></i> Copy Pick Order
+                </button>
+            </div>
+            <div class="card-body">
+                <p class="lead">Users will make their driver selections in the following order:</p>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    {% for user in pick_order %}
+                        <div class="badge bg-primary text-white fs-6 p-2">
+                            {{ loop.index }}. {{ user.name }}
+                        </div>
+                    {% endfor %}
+                    
+                    {% for user in pick_order|reverse %}
+                        <div class="badge bg-success text-white fs-6 p-2">
+                            {{ pick_order|length + loop.index }}. {{ user.name }}
+                        </div>
+                    {% endfor %}
+                </div>
+                <!-- Hidden textarea for copy functionality -->
+                <textarea id="copyPickOrderText" style="position: absolute; left: -9999px;" readonly>Pick order for {{ grand_prix.name }}:
+
+Top Team Driver Picks:
+{% for user in pick_order %}{{ loop.index }}. {{ user.name }}
+{% endfor %}
+
+Bottom Team Driver Picks:
+{% for user in pick_order|reverse %}{{ pick_order|length + loop.index }}. {{ user.name }}
+{% endfor %}</textarea>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Pick order is based on the points from the last race (lowest to highest). 
+                    {% if pick_order|length > 0 and pick_order[0].points is defined %}
+                        Users with the same points are randomly ordered.
+                    {% else %}
+                        Since there are no previous race results, the order is completely random.
+                    {% endif %}
+                    <br><br>
+                    <strong>Note:</strong> After all users have made their first pick (numbers 1-{{ pick_order|length }}), 
+                    the order reverses for the second pick (numbers {{ pick_order|length + 1 }}-{{ pick_order|length * 2 }}).
+                    <br><br>
+                    <span class="badge bg-primary text-white">Blue</span> = Top Team Driver picks (first round)
+                    <br>
+                    <span class="badge bg-success text-white">Green</span> = Bottom Team Driver picks (second round)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
     <div class="col-md-6">
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
@@ -119,7 +174,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for user in users %}
+                            {% for user in pick_order %}
                             <tr>
                                 <td>{{ user.name }}</td>
                                 <td>
@@ -156,6 +211,8 @@
         const bottomDriverSelect = document.getElementById('bottom_driver_id');
         const topSubmitBtn = document.getElementById('topSubmitBtn');
         const bottomSubmitBtn = document.getElementById('bottomSubmitBtn');
+        const copyPickOrderBtn = document.getElementById('copyPickOrderBtn');
+        const copyPickOrderText = document.getElementById('copyPickOrderText');
         
         // Store current selections
         const userSelections = {{ user_selections|tojson|safe }};
@@ -274,6 +331,29 @@
                 bottomDriverSelect.value = 'none';
             }
         }
+        
+        // Copy pick order to clipboard
+        copyPickOrderBtn.addEventListener('click', function() {
+            try {
+                copyPickOrderText.select();
+                document.execCommand('copy');
+                
+                // Show success message
+                const originalText = copyPickOrderBtn.innerHTML;
+                copyPickOrderBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                copyPickOrderBtn.classList.add('btn-success');
+                copyPickOrderBtn.classList.remove('btn-dark');
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    copyPickOrderBtn.innerHTML = originalText;
+                    copyPickOrderBtn.classList.remove('btn-success');
+                    copyPickOrderBtn.classList.add('btn-dark');
+                }, 2000);
+            } catch (error) {
+                alert('Error copying to clipboard. Please try again.');
+            }
+        });
     });
 </script>
 {% endblock %}
