@@ -431,7 +431,9 @@ Bottom Team Driver Picks:
         
         // Copy pick order to clipboard
         function copyPickOrder() {
-            let text = "F1 Sweepstake Pick Order\n\n";
+            // Get the grand prix name from the page title
+            const gpName = "{{ grand_prix.name }}";
+            let text = `Pick order for ${gpName}\n\n`;
             
             // First round
             text += "First Round (Top Team Drivers):\n";
