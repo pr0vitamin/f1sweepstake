@@ -41,6 +41,7 @@ class Driver(db.Model):
     number = db.Column(db.Integer, nullable=False)
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
     team = db.relationship('Team', backref=db.backref('drivers', lazy=True))
+    is_active = db.Column(db.Boolean, default=True)
     
     def __repr__(self):
         return f'<Driver {self.name}>'
@@ -302,8 +303,9 @@ def config():
             name = request.form.get('driver_name')
             number = request.form.get('driver_number')
             team_id = request.form.get('team_id')
+            is_active = 'is_active' in request.form
             if name and number and team_id:
-                driver = Driver(name=name, number=int(number), team_id=int(team_id))
+                driver = Driver(name=name, number=int(number), team_id=int(team_id), is_active=is_active)
                 db.session.add(driver)
                 db.session.commit()
                 flash(f'Driver {name} added successfully!', 'success')
@@ -314,12 +316,14 @@ def config():
             name = request.form.get('driver_name')
             number = request.form.get('driver_number')
             team_id = request.form.get('team_id')
+            is_active = 'is_active' in request.form
             if driver_id and name and number and team_id:
                 driver = Driver.query.get(int(driver_id))
                 if driver:
                     driver.name = name
                     driver.number = int(number)
                     driver.team_id = int(team_id)
+                    driver.is_active = is_active
                     db.session.commit()
                     flash(f'Driver updated successfully!', 'success')
                 active_tab = 'drivers'
@@ -432,7 +436,7 @@ def config():
     # Get data for the configuration page
     users = User.query.all()
     teams = Team.query.all()
-    drivers = Driver.query.all()
+    drivers = Driver.query.join(Team).order_by(Team.is_top_team.desc(), Team.name).all()
     races = GrandPrix.query.order_by(GrandPrix.date).all()
     points_mapping = {pm.position: pm.points for pm in PointsMapping.query.all()}
     
@@ -683,9 +687,9 @@ def driver_picks(gp_id):
     top_teams = Team.query.filter_by(is_top_team=True).all()
     bottom_teams = Team.query.filter_by(is_top_team=False).all()
     
-    # Get drivers from top and bottom teams
-    top_drivers = Driver.query.join(Team).filter(Team.is_top_team == True).all()
-    bottom_drivers = Driver.query.join(Team).filter(Team.is_top_team == False).all()
+    # Get active drivers from top and bottom teams, sorted by team name
+    top_drivers = Driver.query.join(Team).filter(Team.is_top_team == True, Driver.is_active == True).order_by(Team.name, Driver.name).all()
+    bottom_drivers = Driver.query.join(Team).filter(Team.is_top_team == False, Driver.is_active == True).order_by(Team.name, Driver.name).all()
     
     # Get existing selections for this GP with driver and team information
     selections = DriverSelection.query.filter_by(grand_prix_id=gp_id).options(
