@@ -436,7 +436,13 @@ def config():
     # Get data for the configuration page
     users = User.query.all()
     teams = Team.query.all()
+    
+    # Get drivers sorted by category (Top, then Bottom) and then by team name
     drivers = Driver.query.join(Team).order_by(Team.is_top_team.desc(), Team.name).all()
+    
+    # Get active drivers for race results
+    active_drivers = Driver.query.filter_by(is_active=True).join(Team).order_by(Team.is_top_team.desc(), Team.name).all()
+    
     races = GrandPrix.query.order_by(GrandPrix.date).all()
     points_mapping = {pm.position: pm.points for pm in PointsMapping.query.all()}
     
@@ -450,6 +456,7 @@ def config():
         users=users,
         teams=teams,
         drivers=drivers,
+        active_drivers=active_drivers,
         races=races,
         points_mapping=points_mapping,
         races_with_results=races_with_results,
