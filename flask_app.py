@@ -167,19 +167,28 @@ def dashboard():
     # Get all races
     grand_prix_list = GrandPrix.query.order_by(GrandPrix.date).all()
     
-    # Find the next race
-    next_race = None
-    current_date = datetime.now()
-    for gp in grand_prix_list:
-        if gp.date > current_date:
-            next_race = gp
-            break
-    
     # Check which races have results
     races_with_results = {}
     for gp in grand_prix_list:
         has_results = RaceResult.query.filter_by(grand_prix_id=gp.id).first() is not None
         races_with_results[gp.id] = has_results
+    
+    # Find the next race - prioritize races without results, then by date
+    next_race = None
+    current_date = datetime.now()
+    
+    # First, look for the earliest race without results
+    for gp in grand_prix_list:
+        if not races_with_results.get(gp.id, False):
+            next_race = gp
+            break
+    
+    # If all races have results, then find the next race by date
+    if next_race is None:
+        for gp in grand_prix_list:
+            if gp.date > current_date:
+                next_race = gp
+                break
     
     # Get user picks for the next race
     user_picks = {}
