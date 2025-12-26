@@ -113,6 +113,7 @@ export interface Race {
   round_number: number;
   results_finalized: boolean;
   picks_open: boolean;
+  draft_order: any | null; // JSONB storage for DraftOrderEntry[]
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -183,21 +184,21 @@ export interface Notification {
 }
 
 export type NotificationInsert = Omit<Notification, 'id' | 'created_at' | 'read'>;
-export type NotificationUpdate = Partial<Pick<Notification, 'read'>>;
+export type NotificationUpdate = { read?: boolean; };
 
 // ============================================================================
 // Changelog
 // ============================================================================
 
 export type ChangelogAction = 'create' | 'update' | 'delete';
-export type ChangelogEntityType = 
-  | 'profiles' 
-  | 'seasons' 
-  | 'teams' 
-  | 'drivers' 
-  | 'races' 
-  | 'race_results' 
-  | 'picks' 
+export type ChangelogEntityType =
+  | 'profiles'
+  | 'seasons'
+  | 'teams'
+  | 'drivers'
+  | 'races'
+  | 'race_results'
+  | 'picks'
   | 'point_mappings';
 
 export interface ChangelogEntry {
