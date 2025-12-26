@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Flag, Trophy, LayoutGrid, Home } from "lucide-react";
 
 const navItems = [
-    { href: "/", label: "Home", icon: Home },
+    { href: "/dashboard", label: "Home", icon: Home },
     { href: "/draft", label: "Draft", icon: LayoutGrid },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     { href: "/races", label: "Races", icon: Flag },
