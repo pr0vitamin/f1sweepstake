@@ -25,6 +25,17 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const code = searchParams.get("code");
+  if (code) {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      redirect(next);
+    } else {
+      redirect(`/auth/error?error=${error?.message}`);
+    }
+  }
+
   // redirect the user to an error page with some instructions
   redirect(`/auth/error?error=No token hash or type`);
 }
