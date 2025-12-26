@@ -4,7 +4,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Race } from "@/lib/types/database";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, MoreHorizontal, Pencil, Trash } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Pencil, Trash, ListOrdered } from "lucide-react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import {
@@ -87,6 +87,12 @@ export const columns: ColumnDef<Race>[] = [
                             <Link href={`/admin/races/${race.id}`}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Edit Race
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href={`/admin/races/${race.id}/draft`}>
+                                <ListOrdered className="mr-2 h-4 w-4" />
+                                Draft Configuration
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem>
