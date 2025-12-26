@@ -24,7 +24,7 @@ export function shuffleArray<T>(array: T[], seed?: number): T[] {
     const result = [...array];
 
     // Simple seeded random for reproducibility in tests
-    let random = seed !== undefined
+    const random = seed !== undefined
         ? () => {
             seed = (seed! * 1103515245 + 12345) & 0x7fffffff;
             return seed / 0x7fffffff;
