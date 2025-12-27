@@ -8,25 +8,30 @@ import type { PointMapping, RaceResult, Pick, PickWithDetails } from '@/lib/type
 
 /**
  * Get points for a specific finishing position
+ * 
+ * @param position - The finishing position (null if not classified)
+ * @param pointMappings - The position-to-points mapping for the season
+ * @param dnf - Whether the driver did not finish
+ * @param dsq - Whether the driver was disqualified
+ * @param dnfPoints - Points awarded for DNF (from season config)
+ * @param dsqPoints - Points awarded for DSQ (from season config)
  */
 export function getPointsForPosition(
     position: number | null,
     pointMappings: PointMapping[],
     dnf: boolean = false,
-    dsq: boolean = false
+    dsq: boolean = false,
+    dnfPoints: number = -5,
+    dsqPoints: number = -5
 ): number {
-    // DSQ drivers get worst possible points
+    // DSQ drivers get the configured DSQ points
     if (dsq) {
-        const worstMapping = pointMappings.reduce((min, pm) =>
-            pm.points < min.points ? pm : min
-            , pointMappings[0]);
-        return worstMapping?.points ?? 0;
+        return dsqPoints;
     }
 
-    // DNF drivers get second-worst points (or worst if only one bad position)
+    // DNF drivers get the configured DNF points
     if (dnf) {
-        const sortedByPoints = [...pointMappings].sort((a, b) => a.points - b.points);
-        return sortedByPoints[1]?.points ?? sortedByPoints[0]?.points ?? 0;
+        return dnfPoints;
     }
 
     // Normal finish - look up points for position
@@ -42,7 +47,9 @@ export function getPointsForPosition(
 export function calculateRacePoints(
     picks: Pick[],
     raceResults: RaceResult[],
-    pointMappings: PointMapping[]
+    pointMappings: PointMapping[],
+    dnfPoints: number = -5,
+    dsqPoints: number = -5
 ): number {
     let totalPoints = 0;
 
@@ -53,7 +60,9 @@ export function calculateRacePoints(
                 result.position,
                 pointMappings,
                 result.dnf,
-                result.dsq
+                result.dsq,
+                dnfPoints,
+                dsqPoints
             );
         }
     }
@@ -67,7 +76,9 @@ export function calculateRacePoints(
 export function calculateRaceLeaderboard(
     allPicks: PickWithDetails[],
     raceResults: RaceResult[],
-    pointMappings: PointMapping[]
+    pointMappings: PointMapping[],
+    dnfPoints: number = -5,
+    dsqPoints: number = -5
 ): { userId: string; displayName: string; points: number; picks: PickWithDetails[] }[] {
     // Group picks by user
     const picksByUser = allPicks.reduce((acc, pick) => {
@@ -85,7 +96,7 @@ export function calculateRaceLeaderboard(
     const leaderboard = Object.entries(picksByUser).map(([userId, data]) => ({
         userId,
         displayName: data.displayName,
-        points: calculateRacePoints(data.picks, raceResults, pointMappings),
+        points: calculateRacePoints(data.picks, raceResults, pointMappings, dnfPoints, dsqPoints),
         picks: data.picks,
     }));
 

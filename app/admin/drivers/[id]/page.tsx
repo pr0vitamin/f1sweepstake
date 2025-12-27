@@ -16,20 +16,33 @@ export default async function EditDriverPage({ params }: Props) {
 
     const supabase = await createClient();
 
-    // Parallel fetch: Driver and Active Teams
-    const [driverRes, teamsRes] = await Promise.all([
-        supabase.from("drivers").select("*").eq("id", id).single(),
-        supabase.from("teams").select("*").eq("is_active", true).order("name"),
-    ]);
+    // First fetch the driver with their team to get the season_id
+    const { data: driver, error: driverError } = await supabase
+        .from("drivers")
+        .select("*, team:teams(*)")
+        .eq("id", id)
+        .single();
 
-    const driver = driverRes.data;
-    const teams = teamsRes.data;
-
-    if (driverRes.error || !driver) {
+    if (driverError || !driver) {
         notFound();
     }
 
-    if (teamsRes.error || !teams) {
+    // Get the season_id from the driver's current team
+    const seasonId = driver.team?.season_id;
+
+    if (!seasonId) {
+        return <div>Error: Driver has no team or team has no season</div>;
+    }
+
+    // Fetch teams from the same season
+    const { data: teams, error: teamsError } = await supabase
+        .from("teams")
+        .select("*")
+        .eq("season_id", seasonId)
+        .eq("is_active", true)
+        .order("name");
+
+    if (teamsError || !teams) {
         return <div>Error loading teams</div>;
     }
 

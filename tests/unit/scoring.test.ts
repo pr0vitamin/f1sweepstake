@@ -72,12 +72,18 @@ describe('getPointsForPosition', () => {
         expect(getPointsForPosition(null, mockPointMappings)).toBe(0);
     });
 
-    it('returns worst points for DSQ', () => {
-        expect(getPointsForPosition(1, mockPointMappings, false, true)).toBe(-7);
+    it('returns configured points for DSQ', () => {
+        // Default DSQ points (-5)
+        expect(getPointsForPosition(1, mockPointMappings, false, true)).toBe(-5);
+        // Custom DSQ points
+        expect(getPointsForPosition(1, mockPointMappings, false, true, -5, -10)).toBe(-10);
     });
 
-    it('returns second-worst points for DNF', () => {
-        expect(getPointsForPosition(1, mockPointMappings, true, false)).toBe(-6);
+    it('returns configured points for DNF', () => {
+        // Default DNF points (-5)
+        expect(getPointsForPosition(1, mockPointMappings, true, false)).toBe(-5);
+        // Custom DNF points
+        expect(getPointsForPosition(1, mockPointMappings, true, false, -8, -5)).toBe(-8);
     });
 });
 

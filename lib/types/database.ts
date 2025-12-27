@@ -37,6 +37,8 @@ export interface Season {
   id: UUID;
   year: number;
   is_current: boolean;
+  dnf_points: number;
+  dsq_points: number;
   created_at: Timestamp;
   updated_at: Timestamp;
 }

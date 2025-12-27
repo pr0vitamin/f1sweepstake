@@ -19,7 +19,7 @@ export async function generateDraftOrder(raceId: string, strategy: 'random' | 'p
     // 1. Fetch current race details
     const { data: race, error: raceError } = await supabase
         .from("races")
-        .select("*")
+        .select("*, season:seasons(*)")
         .eq("id", raceId)
         .single();
 
@@ -77,12 +77,16 @@ export async function generateDraftOrder(raceId: string, strategy: 'random' | 'p
 
         if (pointsError) throw new Error("Could not fetch point mappings");
 
+        // Get season points config
+        const dnfPoints = (race.season as any).dnf_points ?? -5;
+        const dsqPoints = (race.season as any).dsq_points ?? -5;
+
         // Calculate points for each user
         const playerPoints = profiles.map(profile => {
             const userPicks = prevPicksRaw.filter((p: any) => p.user_id === profile.id);
             // We need to cast picks to match scoring expectation if needed, or just map manual
             // calculateRacePoints expects Pick[] and returns total number
-            const points = calculateRacePoints(userPicks, results, mappings);
+            const points = calculateRacePoints(userPicks, results, mappings, dnfPoints, dsqPoints);
             return {
                 profile,
                 previousRacePoints: points

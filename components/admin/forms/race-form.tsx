@@ -101,9 +101,19 @@ export function RaceForm({ initialData, seasonId }: RaceFormProps) {
 
             router.push("/admin/races");
             router.refresh();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving race:", error);
-            alert("Error saving race");
+
+            // Handle specific error cases
+            let errorMessage = "Error saving race";
+
+            if (error?.code === "23505" || error?.message?.includes("duplicate") || error?.message?.includes("unique")) {
+                errorMessage = `Round ${values.round_number} already exists for this season. Please choose a different round number.`;
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+
+            alert(errorMessage);
         } finally {
             setIsLoading(false);
         }

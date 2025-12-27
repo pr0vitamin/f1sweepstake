@@ -4,9 +4,10 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Race } from "@/lib/types/database";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, MoreHorizontal, Pencil, Trash, ListOrdered } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Pencil, Trash, ListOrdered, Trophy, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
+import { useState, useTransition } from "react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,6 +15,106 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { deleteRace } from "../actions";
+
+function RaceActionsCell({ race }: { race: Race }) {
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [isPending, startTransition] = useTransition();
+    const [error, setError] = useState<string | null>(null);
+
+    const handleDelete = () => {
+        startTransition(async () => {
+            const result = await deleteRace(race.id);
+            if (!result.success) {
+                setError(result.error || "Failed to delete race");
+            } else {
+                setShowDeleteDialog(false);
+            }
+        });
+    };
+
+    return (
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                        <Link href={`/admin/races/${race.id}`}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit Race
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href={`/admin/races/${race.id}/draft`}>
+                            <ListOrdered className="mr-2 h-4 w-4" />
+                            Draft Configuration
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href={`/admin/races/${race.id}/results`}>
+                            <Trophy className="mr-2 h-4 w-4" />
+                            Manage Results
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={() => setShowDeleteDialog(true)}
+                    >
+                        <Trash className="mr-2 h-4 w-4" />
+                        Delete Race
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+                setShowDeleteDialog(open);
+                if (!open) setError(null);
+            }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Race</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete <strong>{race.name}</strong> (Round {race.round_number})?
+                            This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    {error && (
+                        <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950 p-3 rounded-md">
+                            {error}
+                        </div>
+                    )}
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <Button
+                            onClick={handleDelete}
+                            disabled={isPending}
+                            variant="destructive"
+                        >
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
+    );
+}
 
 export const columns: ColumnDef<Race>[] = [
     {
@@ -47,7 +148,6 @@ export const columns: ColumnDef<Race>[] = [
         header: "Date",
         cell: ({ row }) => {
             const dateStr = row.getValue("race_date") as string;
-            // Postgres date 'YYYY-MM-DD' parses correctly with parseISO or new Date in modern browsers
             return <span>{format(parseISO(dateStr), "MMM d, yyyy")}</span>
         }
     },
@@ -59,7 +159,6 @@ export const columns: ColumnDef<Race>[] = [
             const resultsFinalized = row.original.results_finalized;
             const hasDraftOrder = !!row.original.draft_order;
 
-            // Determine status based on state
             if (resultsFinalized) {
                 return <Badge variant="secondary">Completed</Badge>;
             }
@@ -74,41 +173,6 @@ export const columns: ColumnDef<Race>[] = [
     },
     {
         id: "actions",
-        cell: ({ row }) => {
-            const race = row.original;
-
-            return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem asChild>
-                            <Link href={`/admin/races/${race.id}`}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit Race
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link href={`/admin/races/${race.id}/draft`}>
-                                <ListOrdered className="mr-2 h-4 w-4" />
-                                Draft Configuration
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                            Import Results (Todo)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete Race
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            );
-        },
+        cell: ({ row }) => <RaceActionsCell race={row.original} />,
     },
 ];
