@@ -94,9 +94,9 @@ export function DriverForm({ initialData, teams }: DriverFormProps) {
 
             router.push("/admin/drivers");
             router.refresh();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving driver:", error);
-            alert("Error saving driver");
+            alert(`Error saving driver: ${error?.message || 'Unknown error'}`);
         } finally {
             setIsLoading(false);
         }

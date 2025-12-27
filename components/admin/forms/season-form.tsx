@@ -81,7 +81,6 @@ export function SeasonForm({ initialData }: SeasonFormProps) {
                     .insert({
                         year: values.year,
                         is_current: values.is_current,
-                        point_mapping: {}, // Default empty, configured later
                     });
 
                 if (error) throw error;
