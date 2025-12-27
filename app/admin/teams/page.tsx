@@ -4,15 +4,41 @@ import { columns } from "./columns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
-import { Team } from "@/lib/types/database";
+import { Team, Season } from "@/lib/types/database";
+import { SeasonSelector } from "@/components/admin/season-selector";
 
-export default async function TeamsPage() {
+interface TeamsPageProps {
+    searchParams: Promise<{ season?: string }>;
+}
+
+export default async function TeamsPage({ searchParams }: TeamsPageProps) {
     const supabase = await createClient();
+    const params = await searchParams;
 
-    // Fetch all teams using our database types
+    // Fetch all seasons for the selector
+    const { data: seasons } = await supabase
+        .from("seasons")
+        .select("*")
+        .order("year", { ascending: false });
+
+    // Find current season or use from URL
+    const currentSeason = seasons?.find(s => s.is_current);
+    const selectedSeasonId = params.season || currentSeason?.id;
+
+    if (!selectedSeasonId) {
+        return (
+            <div className="flex flex-col gap-6">
+                <h1 className="text-3xl font-bold tracking-tight">Teams</h1>
+                <p className="text-muted-foreground">No seasons found. Please create a season first.</p>
+            </div>
+        );
+    }
+
+    // Fetch teams for the selected season
     const { data: teams, error } = await supabase
         .from("teams")
         .select("*")
+        .eq("season_id", selectedSeasonId)
         .order("name", { ascending: true });
 
     if (error) {
@@ -20,19 +46,27 @@ export default async function TeamsPage() {
         return <div>Error loading teams</div>;
     }
 
-    // Cast to ensure type compatibility if needed, though supabase-js is usually good
     const typedTeams = teams as Team[];
+    const typedSeasons = seasons as Season[];
 
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Teams</h1>
-                <Button asChild>
-                    <Link href="/admin/teams/new">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Team
-                    </Link>
-                </Button>
+                <div className="flex items-center gap-4">
+                    <h1 className="text-3xl font-bold tracking-tight">Teams</h1>
+                    <SeasonSelector
+                        seasons={typedSeasons}
+                        currentSeasonId={selectedSeasonId}
+                    />
+                </div>
+                {currentSeason?.id === selectedSeasonId && (
+                    <Button asChild>
+                        <Link href={`/admin/teams/new?season=${selectedSeasonId}`}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Team
+                        </Link>
+                    </Button>
+                )}
             </div>
             <DataTable columns={columns} data={typedTeams} />
         </div>

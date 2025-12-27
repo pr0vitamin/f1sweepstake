@@ -5,6 +5,7 @@ import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import Link from "next/link";
 import { Suspense } from "react";
+import { Settings } from "lucide-react";
 
 export default async function DashboardLayout({
     children,
@@ -29,11 +30,11 @@ export default async function DashboardLayout({
     return (
         <main className="min-h-screen flex flex-col">
             <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="container flex h-14 items-center justify-between">
+                <div className="container mx-auto flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center gap-4">
                         <Link href="/dashboard" className="flex items-center gap-2">
                             <span className="text-xl">🏎️</span>
-                            <span className="font-bold hidden sm:inline">F1 Sweepstakes</span>
+                            <span className="font-bold hidden sm:inline whitespace-nowrap">F1 Sweepstakes</span>
                         </Link>
                         <MainNav />
                     </div>
@@ -41,9 +42,10 @@ export default async function DashboardLayout({
                         {profile?.is_admin && (
                             <Link
                                 href="/admin"
-                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                             >
-                                Admin
+                                <Settings className="h-4 w-4" />
+                                <span className="hidden sm:inline">Admin</span>
                             </Link>
                         )}
                         <Suspense fallback={<div className="h-8 w-8 rounded-full bg-muted animate-pulse" />}>
@@ -54,7 +56,7 @@ export default async function DashboardLayout({
                 </div>
             </header>
 
-            <div className="flex-1">
+            <div className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8">
                 {children}
             </div>
 

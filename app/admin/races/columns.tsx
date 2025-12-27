@@ -55,17 +55,21 @@ export const columns: ColumnDef<Race>[] = [
         accessorKey: "picks_open",
         header: "Status",
         cell: ({ row }) => {
-            const isOpen = row.getValue("picks_open");
-            const isFinalized = row.original.results_finalized;
+            const picksOpen = row.getValue("picks_open") as boolean;
+            const resultsFinalized = row.original.results_finalized;
+            const hasDraftOrder = !!row.original.draft_order;
 
-            if (isFinalized) {
-                return <Badge variant="secondary">Finalized</Badge>
+            // Determine status based on state
+            if (resultsFinalized) {
+                return <Badge variant="secondary">Completed</Badge>;
             }
-            return (
-                <Badge variant={isOpen ? "default" : "outline"} className={!isOpen ? "border-dashed" : ""}>
-                    {isOpen ? "Open" : "Adjusting"}
-                </Badge>
-            );
+            if (picksOpen) {
+                return <Badge className="bg-green-600 hover:bg-green-700">Draft Open</Badge>;
+            }
+            if (hasDraftOrder) {
+                return <Badge variant="outline" className="border-amber-500 text-amber-600">Awaiting Results</Badge>;
+            }
+            return <Badge variant="outline" className="border-dashed">Upcoming</Badge>;
         },
     },
     {

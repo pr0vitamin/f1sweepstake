@@ -65,7 +65,7 @@ export function AdminNav() {
                         href={item.href}
                         className={cn(
                             "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                            pathname === item.href ? "bg-accent text-accent-foreground" : "text-transparent"
+                            pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                         )}
                     >
                         <Icon className="mr-2 h-4 w-4" />
