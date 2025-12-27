@@ -5,11 +5,22 @@ import { Team } from "@/lib/types/database";
 export default async function NewDriverPage() {
     const supabase = await createClient();
 
-    // Fetch active season to filter teams if needed, or better, fetch all active teams
-    // For simplicity, we fetch all teams. In real app, might want only current season's teams.
+    // Get the current season
+    const { data: currentSeason } = await supabase
+        .from("seasons")
+        .select("id")
+        .eq("is_current", true)
+        .single();
+
+    if (!currentSeason) {
+        return <div>No current season found. Please set a season as current first.</div>;
+    }
+
+    // Fetch only teams from the current season
     const { data: teams, error } = await supabase
         .from("teams")
         .select("*")
+        .eq("season_id", currentSeason.id)
         .eq("is_active", true)
         .order("name");
 

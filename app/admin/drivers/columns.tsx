@@ -4,8 +4,9 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DriverWithTeam } from "@/lib/types/database";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, MoreHorizontal, Pencil, Trash } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Pencil, Trash, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useState, useTransition } from "react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -13,6 +14,94 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { deleteDriver } from "../actions";
+
+function DriverActionsCell({ driver }: { driver: DriverWithTeam }) {
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [isPending, startTransition] = useTransition();
+    const [error, setError] = useState<string | null>(null);
+
+    const handleDelete = () => {
+        startTransition(async () => {
+            const result = await deleteDriver(driver.id);
+            if (!result.success) {
+                setError(result.error || "Failed to delete driver");
+            } else {
+                setShowDeleteDialog(false);
+            }
+        });
+    };
+
+    return (
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                        <Link href={`/admin/drivers/${driver.id}`}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit Driver
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={() => setShowDeleteDialog(true)}
+                    >
+                        <Trash className="mr-2 h-4 w-4" />
+                        Delete Driver
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+                setShowDeleteDialog(open);
+                if (!open) setError(null);
+            }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Driver</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete <strong>{driver.first_name} {driver.last_name}</strong>?
+                            This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    {error && (
+                        <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950 p-3 rounded-md">
+                            {error}
+                        </div>
+                    )}
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <Button
+                            onClick={handleDelete}
+                            disabled={isPending}
+                            variant="destructive"
+                        >
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
+    );
+}
 
 export const columns: ColumnDef<DriverWithTeam>[] = [
     {
@@ -83,32 +172,6 @@ export const columns: ColumnDef<DriverWithTeam>[] = [
     },
     {
         id: "actions",
-        cell: ({ row }) => {
-            const driver = row.original;
-
-            return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem asChild>
-                            <Link href={`/admin/drivers/${driver.id}`}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit Driver
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete Driver
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            );
-        },
+        cell: ({ row }) => <DriverActionsCell driver={row.original} />,
     },
 ];
