@@ -196,12 +196,103 @@ export function ResultsManager({
     const handleFinalizeResults = async () => {
         startTransition(async () => {
             try {
+                // 1. Mark current race as finalized
                 const { error: updateError } = await supabase
                     .from("races")
                     .update({ results_finalized: true, picks_open: false })
                     .eq("id", race.id);
 
                 if (updateError) throw updateError;
+
+                // 2. Find the next race in the season
+                const { data: nextRaces } = await supabase
+                    .from("races")
+                    .select("*")
+                    .eq("season_id", race.season_id)
+                    .eq("round_number", race.round_number + 1)
+                    .limit(1);
+
+                if (nextRaces && nextRaces.length > 0) {
+                    const nextRace = nextRaces[0];
+
+                    // 3. Fetch active profiles
+                    const { data: profiles } = await supabase
+                        .from("profiles")
+                        .select("*")
+                        .eq("is_active", true);
+
+                    if (profiles && profiles.length > 0) {
+                        // 4. Fetch picks for THIS race (just finalized)
+                        const { data: picks } = await supabase
+                            .from("picks")
+                            .select("*")
+                            .eq("race_id", race.id);
+
+                        // 5. Fetch race results for THIS race (just finalized)
+                        const { data: results } = await supabase
+                            .from("race_results")
+                            .select("*")
+                            .eq("race_id", race.id);
+
+                        // 6. Fetch point mappings
+                        const { data: mappings } = await supabase
+                            .from("point_mappings")
+                            .select("*")
+                            .eq("season_id", race.season_id);
+
+                        // 7. Get season config
+                        const { data: season } = await supabase
+                            .from("seasons")
+                            .select("dnf_points, dsq_points")
+                            .eq("id", race.season_id)
+                            .single();
+
+                        const dnfPoints = season?.dnf_points ?? -5;
+                        const dsqPoints = season?.dsq_points ?? -5;
+
+                        // 8. Calculate points for each user based on THIS race
+                        const { calculateRacePoints } = await import("@/lib/scoring");
+                        const { generatePerformanceDraftOrder } = await import("@/lib/draft-order");
+
+                        const playerPoints = profiles.map(profile => {
+                            const userPicks = (picks || []).filter(p => p.user_id === profile.id);
+                            const points = calculateRacePoints(userPicks, results || [], mappings || [], dnfPoints, dsqPoints);
+                            return {
+                                profile,
+                                previousRacePoints: points
+                            };
+                        });
+
+                        // 9. Generate draft order (lowest points picks first - snake draft)
+                        const draftOrder = generatePerformanceDraftOrder(playerPoints);
+
+                        // 10. Save to next race and open picks
+                        await supabase
+                            .from("races")
+                            .update({ draft_order: draftOrder, picks_open: true })
+                            .eq("id", nextRace.id);
+
+                        // 11. Send "race_upcoming" notification for next race
+                        const { createNotificationForAll } = await import("@/app/(dashboard)/notifications/actions");
+                        const { format, parseISO } = await import("date-fns");
+                        const raceDate = format(parseISO(nextRace.race_date), "MMMM d");
+                        await createNotificationForAll(
+                            "race_upcoming",
+                            `Draft Open: ${nextRace.name}`,
+                            `The next race is ${nextRace.name} and drafting is now open. Make sure to get your picks done by ${raceDate}!`,
+                            { race_id: nextRace.id, race_name: nextRace.name }
+                        );
+                    }
+                }
+
+                // 12. Send "results_available" notification for THIS race
+                const { createNotificationForAll } = await import("@/app/(dashboard)/notifications/actions");
+                await createNotificationForAll(
+                    "results_available",
+                    `Results In: ${race.name}`,
+                    `The results for ${race.name} have been finalized. Check the leaderboard to see how you did!`,
+                    { race_id: race.id, race_name: race.name }
+                );
 
                 setSuccess(true);
                 router.refresh();

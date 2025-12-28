@@ -47,23 +47,52 @@ export default async function RacesPage() {
                     const raceDate = parseISO(race.race_date);
                     const isPast = raceDate < new Date();
 
+                    // Determine status
+                    let status: 'completed' | 'drafting' | 'pending' | 'upcoming';
+                    let statusLabel: string;
+                    let statusColor: string;
+                    let borderColor: string;
+                    let statusDescription: string;
+
+                    if (race.results_finalized) {
+                        status = 'completed';
+                        statusLabel = 'Completed';
+                        statusColor = 'bg-gray-500';
+                        borderColor = 'border-l-gray-500';
+                        statusDescription = 'Results finalized';
+                    } else if (race.picks_open) {
+                        status = 'drafting';
+                        statusLabel = 'Draft Open';
+                        statusColor = 'bg-green-600';
+                        borderColor = 'border-l-green-600';
+                        statusDescription = 'Make your picks now!';
+                    } else if (isPast) {
+                        status = 'pending';
+                        statusLabel = 'Awaiting Results';
+                        statusColor = 'bg-yellow-600';
+                        borderColor = 'border-l-yellow-600';
+                        statusDescription = 'Race complete, results pending';
+                    } else {
+                        status = 'upcoming';
+                        statusLabel = 'Upcoming';
+                        statusColor = 'bg-blue-500';
+                        borderColor = 'border-l-blue-500';
+                        statusDescription = `Race day: ${format(raceDate, "MMM d")}`;
+                    }
+
                     return (
                         <Link key={race.id} href={`/races/${race.id}`}>
-                            <Card className="h-full hover:bg-accent/50 transition-colors cursor-pointer">
+                            <Card className={`h-full hover:bg-accent/50 transition-colors cursor-pointer border-l-4 ${borderColor}`}>
                                 <CardHeader className="pb-2">
                                     <div className="flex items-center justify-between">
-                                        <Badge variant="outline" className="mb-2">
+                                        <Badge variant="outline">
                                             Round {race.round_number}
                                         </Badge>
-                                        {race.results_finalized ? (
-                                            <Badge variant="secondary">Completed</Badge>
-                                        ) : race.picks_open ? (
-                                            <Badge className="bg-green-600">Picks Open</Badge>
-                                        ) : isPast ? (
-                                            <Badge variant="outline">Pending Results</Badge>
-                                        ) : null}
+                                        <Badge className={statusColor}>
+                                            {statusLabel}
+                                        </Badge>
                                     </div>
-                                    <CardTitle className="text-lg">{race.name}</CardTitle>
+                                    <CardTitle className="text-lg mt-2">{race.name}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="flex flex-col gap-1 text-sm text-muted-foreground">
@@ -76,6 +105,9 @@ export default async function RacesPage() {
                                             {format(raceDate, "MMMM d, yyyy")}
                                         </div>
                                     </div>
+                                    <p className={`text-xs mt-3 font-medium ${status === 'drafting' ? 'text-green-600' : status === 'pending' ? 'text-yellow-600' : 'text-muted-foreground'}`}>
+                                        {statusDescription}
+                                    </p>
                                 </CardContent>
                             </Card>
                         </Link>

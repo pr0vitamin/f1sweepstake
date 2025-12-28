@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { MainNav } from "@/components/main-nav";
 import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { NotificationBell } from "@/components/notification-bell";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Settings } from "lucide-react";
@@ -38,7 +39,7 @@ export default async function DashboardLayout({
                         </Link>
                         <MainNav />
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
                         {profile?.is_admin && (
                             <Link
                                 href="/admin"
@@ -48,6 +49,7 @@ export default async function DashboardLayout({
                                 <span className="hidden sm:inline">Admin</span>
                             </Link>
                         )}
+                        <NotificationBell />
                         <Suspense fallback={<div className="h-8 w-8 rounded-full bg-muted animate-pulse" />}>
                             <AuthButton />
                         </Suspense>

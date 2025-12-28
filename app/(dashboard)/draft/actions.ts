@@ -4,12 +4,27 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentPickSlot, canEditPick, DraftOrderEntry } from "@/lib/draft-order";
 
-export async function makePick(raceId: string, driverId: string) {
+export async function makePick(raceId: string, driverId: string, onBehalfOfUserId?: string) {
     const supabase = await createClient();
 
     // 1. Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Not authenticated");
+
+    // Check if user is admin (if picking on behalf of someone else)
+    let targetUserId = user.id;
+    if (onBehalfOfUserId && onBehalfOfUserId !== user.id) {
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("is_admin")
+            .eq("id", user.id)
+            .single();
+
+        if (!profile?.is_admin) {
+            throw new Error("Only admins can pick on behalf of other users");
+        }
+        targetUserId = onBehalfOfUserId;
+    }
 
     // 2. Get race with draft order
     const { data: race, error: raceError } = await supabase
@@ -32,7 +47,7 @@ export async function makePick(raceId: string, driverId: string) {
 
     if (picksError) throw new Error("Could not fetch picks");
 
-    // 4. Check if it's user's turn
+    // 4. Check if it's target user's turn
     const completedPicks = existingPicks.map(p => ({
         userId: p.user_id,
         draftRound: p.draft_round,
@@ -42,7 +57,7 @@ export async function makePick(raceId: string, driverId: string) {
     const currentSlot = getCurrentPickSlot(draftOrder, completedPicks);
 
     if (!currentSlot) throw new Error("Draft is complete");
-    if (currentSlot.userId !== user.id) throw new Error("Not your turn to pick");
+    if (currentSlot.userId !== targetUserId) throw new Error("Not this user's turn to pick");
 
     // 5. Check if driver is already picked
     const driverAlreadyPicked = existingPicks.some(p => p.driver_id === driverId);
@@ -53,13 +68,82 @@ export async function makePick(raceId: string, driverId: string) {
         .from("picks")
         .insert({
             race_id: raceId,
-            user_id: user.id,
+            user_id: targetUserId,
             driver_id: driverId,
             pick_order: currentSlot.pickOrder,
             draft_round: currentSlot.draftRound
         });
 
     if (insertError) throw insertError;
+
+    // 7. Check if only 1 driver remains - auto-assign to last player
+    const updatedPicks = [...existingPicks, { driver_id: driverId, user_id: targetUserId, draft_round: currentSlot.draftRound, pick_order: currentSlot.pickOrder }];
+    const updatedCompletedPicks = updatedPicks.map(p => ({
+        userId: p.user_id,
+        draftRound: p.draft_round,
+        pickOrder: p.pick_order
+    }));
+
+    const nextSlot = getCurrentPickSlot(draftOrder, updatedCompletedPicks);
+    let draftComplete = !nextSlot;
+
+    if (nextSlot) {
+        // Get all active drivers for this race's season
+        const { data: allDrivers } = await supabase
+            .from("drivers")
+            .select("id, team:teams!inner(season_id)")
+            .eq("team.season_id", race.season_id)
+            .eq("is_active", true);
+
+        if (allDrivers) {
+            const pickedDriverIds = new Set(updatedPicks.map(p => p.driver_id));
+            const remainingDrivers = allDrivers.filter(d => !pickedDriverIds.has(d.id));
+
+            // If only 1 driver left, auto-assign to next player
+            if (remainingDrivers.length === 1) {
+                const lastDriver = remainingDrivers[0];
+                await supabase
+                    .from("picks")
+                    .insert({
+                        race_id: raceId,
+                        user_id: nextSlot.userId,
+                        driver_id: lastDriver.id,
+                        pick_order: nextSlot.pickOrder,
+                        draft_round: nextSlot.draftRound
+                    });
+
+                // After auto-assign, check if draft is now complete
+                const finalPicks = [...updatedPicks, { driver_id: lastDriver.id, user_id: nextSlot.userId, draft_round: nextSlot.draftRound, pick_order: nextSlot.pickOrder }];
+                const finalCompletedPicks = finalPicks.map(p => ({
+                    userId: p.user_id,
+                    draftRound: p.draft_round,
+                    pickOrder: p.pick_order
+                }));
+                draftComplete = !getCurrentPickSlot(draftOrder, finalCompletedPicks);
+            }
+        }
+    }
+
+    // 8. If draft is complete (no more slots), auto-close picks
+    if (draftComplete) {
+        await supabase
+            .from("races")
+            .update({ picks_open: false })
+            .eq("id", raceId);
+    } else {
+        // Draft continues - notify next player it's their turn
+        const finalNextSlot = getCurrentPickSlot(draftOrder, updatedCompletedPicks);
+        if (finalNextSlot && finalNextSlot.userId !== targetUserId) {
+            const { createNotification } = await import("@/app/(dashboard)/notifications/actions");
+            await createNotification(
+                finalNextSlot.userId,
+                "your_turn_to_pick",
+                "Your Turn to Pick!",
+                `It's your turn to pick in the ${race.name} draft. Don't keep everyone waiting!`,
+                { race_id: raceId, race_name: race.name }
+            );
+        }
+    }
 
     revalidatePath(`/draft`);
     revalidatePath(`/admin/races/${raceId}/draft`);
