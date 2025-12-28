@@ -11,7 +11,8 @@ import {
     Flag,
     Settings,
     History,
-    FileText
+    FileText,
+    UserCog
 } from "lucide-react";
 
 const navItems = [
@@ -44,6 +45,11 @@ const navItems = [
         title: "Point Mappings",
         href: "/admin/points",
         icon: Settings,
+    },
+    {
+        title: "Users",
+        href: "/admin/users",
+        icon: UserCog,
     },
     {
         title: "Changelog",
