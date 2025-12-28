@@ -23,12 +23,35 @@ export default async function DashboardHome() {
         .eq("is_current", true)
         .single();
 
-    // Fetch active race (picks open)
-    const { data: activeRace } = await supabase
+
+    // Fetch active race (picks open) or pending race (closed but not finalized)
+    let activeRace = null;
+    let isPendingRace = false;
+
+    const { data: openRaces } = await supabase
         .from("races")
         .select("*")
         .eq("picks_open", true)
-        .single();
+        .limit(1);
+
+    if (openRaces && openRaces.length > 0) {
+        activeRace = openRaces[0];
+    } else {
+        // Look for pending race (closed but awaiting results)
+        const { data: pendingRaces } = await supabase
+            .from("races")
+            .select("*")
+            .eq("picks_open", false)
+            .eq("results_finalized", false)
+            .not("draft_order", "is", null)
+            .order("race_date", { ascending: false })
+            .limit(1);
+
+        if (pendingRaces && pendingRaces.length > 0) {
+            activeRace = pendingRaces[0];
+            isPendingRace = true;
+        }
+    }
 
     // Fetch upcoming races
     const { data: upcomingRaces } = await supabase
@@ -130,29 +153,34 @@ export default async function DashboardHome() {
             {/* Action Cards */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {/* Active Draft Card */}
-                <Card className={activeRace ? "border-primary" : ""}>
+                <Card>
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <CardTitle className="flex items-center gap-2">
                                 <LayoutGrid className="h-5 w-5" />
                                 Draft
                             </CardTitle>
-                            {activeRace && (
+                            {activeRace && !isPendingRace && (
                                 <Badge className="bg-green-600">Live</Badge>
+                            )}
+                            {activeRace && isPendingRace && (
+                                <Badge variant="outline">Awaiting Results</Badge>
                             )}
                         </div>
                         <CardDescription>
                             {activeRace
-                                ? `${activeRace.name} draft is open!`
+                                ? isPendingRace
+                                    ? `${activeRace.name} - View your picks`
+                                    : `${activeRace.name} draft is open!`
                                 : "No active draft right now"
                             }
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {activeRace ? (
-                            <Button asChild className="w-full">
+                            <Button asChild className="w-full" variant={isPendingRace ? "outline" : "default"}>
                                 <Link href="/draft">
-                                    Go to Draft
+                                    {isPendingRace ? "View Draft" : "Go to Draft"}
                                     <ArrowRight className="ml-2 h-4 w-4" />
                                 </Link>
                             </Button>

@@ -9,6 +9,7 @@ import { DraftOrderEntry, getCurrentPickSlot, canEditPick, formatDraftOrderForTe
 import { DriverWithTeam, Pick, Profile } from "@/lib/types/database";
 import { Loader2, Check, Copy, Clock, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface DraftRoomProps {
     raceId: string;
@@ -17,6 +18,8 @@ interface DraftRoomProps {
     initialPicks: (Pick & { driver: DriverWithTeam })[];
     availableDrivers: DriverWithTeam[];
     currentUserId: string;
+    isAdmin?: boolean;
+    isReadOnly?: boolean;
 }
 
 export function DraftRoom({
@@ -25,13 +28,16 @@ export function DraftRoom({
     draftOrder,
     initialPicks,
     availableDrivers,
-    currentUserId
+    currentUserId,
+    isAdmin = false,
+    isReadOnly = false
 }: DraftRoomProps) {
     const [picks, setPicks] = useState(initialPicks);
     const [drivers, setDrivers] = useState(availableDrivers);
     const [isPending, startTransition] = useTransition();
     const [copied, setCopied] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [pickOnBehalf, setPickOnBehalf] = useState(false);
 
     // Derive state
     const completedPicks = picks.map(p => ({
@@ -43,6 +49,10 @@ export function DraftRoom({
     const currentSlot = getCurrentPickSlot(draftOrder, completedPicks);
     const isMyTurn = currentSlot?.userId === currentUserId;
     const isDraftComplete = currentSlot === null;
+
+    // For admins with pickOnBehalf enabled, they can always pick for whoever's turn it is
+    // In read-only mode, no one can pick
+    const canPick = isReadOnly ? false : (isAdmin && pickOnBehalf ? !isDraftComplete : isMyTurn);
 
     // Get drivers that haven't been picked
     const pickedDriverIds = new Set(picks.map(p => p.driver_id));
@@ -86,7 +96,21 @@ export function DraftRoom({
         setError(null);
         startTransition(async () => {
             try {
-                await makePick(raceId, driverId);
+                // If admin is picking on behalf, pass the current slot's user ID
+                const onBehalfOf = isAdmin && pickOnBehalf && currentSlot ? currentSlot.userId : undefined;
+                await makePick(raceId, driverId, onBehalfOf);
+
+                // Manually refetch picks to update UI immediately
+                const supabase = createClient();
+                const { data } = await supabase
+                    .from("picks")
+                    .select("*, driver:drivers(*, team:teams(*))")
+                    .eq("race_id", raceId)
+                    .order("pick_order");
+
+                if (data) {
+                    setPicks(data as any);
+                }
             } catch (e: any) {
                 setError(e.message || "Failed to make pick");
             }
@@ -110,7 +134,11 @@ export function DraftRoom({
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold">{raceName} Draft</h1>
-                    {isDraftComplete ? (
+                    {isReadOnly ? (
+                        <Badge variant="outline" className="mt-1">
+                            <Clock className="mr-1 h-3 w-3" /> Awaiting Race Results
+                        </Badge>
+                    ) : isDraftComplete ? (
                         <Badge variant="secondary" className="mt-1">
                             <Check className="mr-1 h-3 w-3" /> Draft Complete
                         </Badge>
@@ -143,36 +171,78 @@ export function DraftRoom({
                     <CardHeader>
                         <CardTitle>Available Drivers</CardTitle>
                         <CardDescription>
-                            {isMyTurn ? "Select a driver to pick" : "Waiting for your turn..."}
+                            {canPick ? "Select a driver to pick" : "Waiting for your turn..."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            {unpickedDrivers.map(driver => (
-                                <button
-                                    key={driver.id}
-                                    onClick={() => handlePick(driver.id)}
-                                    disabled={!isMyTurn || isPending}
-                                    className="flex items-center gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <div
-                                        className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                                        style={{ backgroundColor: driver.team?.color || '#333' }}
+                        {/* Admin pick on behalf checkbox */}
+                        {isAdmin && !isDraftComplete && (
+                            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+                                <div className="flex items-center space-x-3">
+                                    <Checkbox
+                                        id="pickOnBehalf"
+                                        checked={pickOnBehalf}
+                                        onCheckedChange={(checked) => setPickOnBehalf(checked === true)}
+                                    />
+                                    <label
+                                        htmlFor="pickOnBehalf"
+                                        className="text-sm font-medium text-amber-800 dark:text-amber-200 cursor-pointer"
                                     >
-                                        {driver.driver_number}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="font-medium">{driver.first_name} {driver.last_name}</p>
-                                        <p className="text-xs text-muted-foreground">{driver.team?.name}</p>
-                                    </div>
-                                    {isPending && isMyTurn && (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    )}
-                                </button>
-                            ))}
-                            {unpickedDrivers.length === 0 && (
+                                        Pick on behalf of {currentSlot?.displayName}
+                                    </label>
+                                </div>
+                            </div>
+                        )}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            {drivers.map(driver => {
+                                const isPicked = pickedDriverIds.has(driver.id);
+                                const pickedBy = isPicked
+                                    ? picks.find(p => p.driver_id === driver.id)
+                                    : null;
+                                const pickedByName = pickedBy
+                                    ? draftOrder.find(s => s.userId === pickedBy.user_id)?.displayName
+                                    : null;
+
+                                return (
+                                    <button
+                                        key={driver.id}
+                                        onClick={() => handlePick(driver.id)}
+                                        disabled={!canPick || isPending || isPicked}
+                                        className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-colors 
+                                            ${isPicked
+                                                ? 'opacity-50 bg-muted cursor-not-allowed'
+                                                : 'hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed'
+                                            }`}
+                                    >
+                                        <div
+                                            className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm ${isPicked ? 'grayscale' : 'text-white'}`}
+                                            style={{ backgroundColor: driver.team?.color || '#333' }}
+                                        >
+                                            {isPicked ? (
+                                                <Check className="h-5 w-5 text-white" />
+                                            ) : (
+                                                driver.driver_number
+                                            )}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className={`font-medium ${isPicked ? 'line-through text-muted-foreground' : ''}`}>
+                                                {driver.first_name} {driver.last_name}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {isPicked && pickedByName
+                                                    ? `Picked by ${pickedByName}`
+                                                    : driver.team?.name}
+                                            </p>
+                                        </div>
+                                        {isPending && canPick && !isPicked && (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                            {drivers.length === 0 && (
                                 <p className="col-span-2 text-center text-muted-foreground py-8">
-                                    All drivers have been picked!
+                                    No drivers available.
                                 </p>
                             )}
                         </div>

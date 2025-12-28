@@ -143,7 +143,17 @@ export const columns: ColumnDef<DriverWithTeam>[] = [
     },
     {
         accessorKey: "team.name",
-        header: "Team",
+        header: ({ column }) => {
+            return (
+                <Button
+                    variant="ghost"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                >
+                    Team
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+            );
+        },
         cell: ({ row }) => {
             const team = row.original.team;
             if (!team) return <span className="text-muted-foreground">No Team</span>;
@@ -160,7 +170,17 @@ export const columns: ColumnDef<DriverWithTeam>[] = [
     },
     {
         accessorKey: "is_active",
-        header: "Status",
+        header: ({ column }) => {
+            return (
+                <Button
+                    variant="ghost"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                >
+                    Status
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+            );
+        },
         cell: ({ row }) => {
             const isActive = row.getValue("is_active");
             return (
