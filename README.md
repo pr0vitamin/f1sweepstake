@@ -118,6 +118,10 @@ Once this is disabled, you can invite players by inviting them in Supabase (Auth
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 4. Deploy!
+5. **Configure Supabase URLs** - After deploying, go to your Supabase Dashboard:
+   - **Authentication → URL Configuration**
+   - Set **Site URL** to your production URL (e.g., `https://your-app.vercel.app`)
+   - Add `https://your-app.vercel.app/**` to **Redirect URLs**
 
 ### Netlify
 
