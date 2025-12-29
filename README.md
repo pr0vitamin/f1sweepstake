@@ -51,7 +51,21 @@ You can find these in your Supabase project dashboard under **Settings > API**.
 
 ### 4. Set Up the Database
 
-Run the database migrations to create tables, policies, and seed data:
+First, log in to the Supabase CLI:
+
+```bash
+npx supabase login
+```
+
+Then, link your local project to your Supabase project:
+
+```bash
+npx supabase link --project-ref YOUR_PROJECT_REF
+```
+
+You can find your project ref in your Supabase dashboard URL: `https://supabase.com/dashboard/project/YOUR_PROJECT_REF`
+
+Then run the migrations to create tables, policies, and seed data:
 
 ```bash
 npx supabase db push
