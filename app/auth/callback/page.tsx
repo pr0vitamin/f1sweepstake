@@ -40,7 +40,7 @@ export default function AuthCallbackPage() {
                 }
 
                 // Redirect to protected page
-                router.push("/protected");
+                router.push("/dashboard");
                 return;
             }
 
@@ -52,7 +52,7 @@ export default function AuthCallbackPage() {
                     setError(error.message);
                     return;
                 }
-                router.push("/protected");
+                router.push("/dashboard");
                 return;
             }
 

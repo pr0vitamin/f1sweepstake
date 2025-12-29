@@ -75,7 +75,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Creating an Admin User
 
-1. Sign up for an account at `/auth/signup`
+1. Sign up for an account using your email.
 2. Run this SQL in the Supabase SQL Editor to make yourself an admin:
 
 ```sql
@@ -88,7 +88,11 @@ WHERE email = 'your-email@example.com';
 
 ### Inviting Players
 
-Players can sign up at `/auth/signup`. Their profiles are automatically created with `is_active = true`.
+By default, anyone can sign themselves up at `/auth/login`, but you probably don't want that, since this sweepstakes only works with a specific number of people.
+
+To prevent anyone from being able to sign up, you should disable the "Allow new users to sign up" setting in Supabase (Project Settings > Authentication > Sign In/Providers).
+
+Once this is disabled, you can invite players by inviting them in Supabase (Authentication > Users > Add User > Send Invitation).
 
 ## Deployment
 

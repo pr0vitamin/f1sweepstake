@@ -31,7 +31,7 @@ export default async function AdminLayout({
         .single();
 
     if (!profile?.is_admin) {
-        return redirect("/protected");
+        return redirect("/dashboard");
     }
 
     return (
