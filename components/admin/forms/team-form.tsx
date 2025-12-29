@@ -40,8 +40,14 @@ export function TeamForm({ initialData, seasonId }: TeamFormProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+    type FormValues = {
+        name: string;
+        color: string;
+        is_active: boolean;
+    };
+
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             name: initialData?.name || "",
             color: initialData?.color || "#000000",

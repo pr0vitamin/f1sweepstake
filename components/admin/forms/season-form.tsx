@@ -38,8 +38,14 @@ export function SeasonForm({ initialData, currentSeasonId }: SeasonFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+    type FormValues = {
+        year: number;
+        is_current: boolean;
+        copy_from_current: boolean;
+    };
+
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             year: initialData?.year || new Date().getFullYear() + 1,
             is_current: initialData?.is_current ?? false,

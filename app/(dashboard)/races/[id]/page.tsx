@@ -7,6 +7,8 @@ import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { Flag, MapPin, Calendar, Trophy, ArrowLeft, Users } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 type Props = {
     params: Promise<{ id: string }>;
 }
@@ -283,33 +285,35 @@ export default async function RaceDetailPage({ params }: Props) {
                         ) : picks && picks.length > 0 ? (
                             <div className="space-y-2 max-h-80 overflow-y-auto">
                                 {/* Group by user */}
-                                {Object.entries(
-                                    picks.reduce((acc, pick) => {
+                                {(() => {
+                                    const grouped = picks.reduce((acc, pick) => {
                                         const name = pick.profile?.display_name || "Unknown";
                                         if (!acc[name]) acc[name] = [];
                                         acc[name].push(pick);
                                         return acc;
-                                    }, {} as Record<string, typeof picks>)
-                                ).map(([userName, userPicks]) => (
-                                    <div key={userName} className="rounded-md border p-3">
-                                        <p className="font-medium text-sm mb-2">{userName}</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {userPicks.map((pick: typeof picks[0]) => (
-                                                <div key={pick.id} className="flex items-center gap-1">
-                                                    <div
-                                                        className="w-6 h-6 rounded flex items-center justify-center text-white font-bold text-xs"
-                                                        style={{ backgroundColor: pick.driver?.team?.color || '#666' }}
-                                                    >
-                                                        {pick.driver?.driver_number}
+                                    }, {} as Record<string, typeof picks>);
+
+                                    return (Object.entries(grouped) as [string, typeof picks][]).map(([userName, userPicks]) => (
+                                        <div key={userName} className="rounded-md border p-3">
+                                            <p className="font-medium text-sm mb-2">{userName}</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {userPicks.map((pick) => (
+                                                    <div key={pick.id} className="flex items-center gap-1">
+                                                        <div
+                                                            className="w-6 h-6 rounded flex items-center justify-center text-white font-bold text-xs"
+                                                            style={{ backgroundColor: pick.driver?.team?.color || '#666' }}
+                                                        >
+                                                            {pick.driver?.driver_number}
+                                                        </div>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {pick.driver?.last_name}
+                                                        </span>
                                                     </div>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {pick.driver?.last_name}
-                                                    </span>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ));
+                                })()}
                             </div>
                         ) : (
                             <p className="text-sm text-muted-foreground text-center py-4">

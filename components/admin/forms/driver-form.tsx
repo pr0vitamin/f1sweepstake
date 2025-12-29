@@ -32,7 +32,10 @@ const formSchema = z.object({
     first_name: z.string().min(2, "First name is too short"),
     last_name: z.string().min(2, "Last name is too short"),
     abbreviation: z.string().length(3, "Abbreviation must be exactly 3 letters").toUpperCase(),
-    driver_number: z.coerce.number().min(1, "Number must be > 0").max(99, "Number must be < 100"),
+    driver_number: z.preprocess(
+        (val) => (typeof val === 'string' ? parseInt(val, 10) : val),
+        z.number().min(1, "Number must be > 0").max(99, "Number must be < 100")
+    ),
     team_id: z.string().uuid("Please select a team"),
     is_active: z.boolean().default(true),
 });
@@ -46,8 +49,17 @@ export function DriverForm({ initialData, teams }: DriverFormProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+    type FormValues = {
+        first_name: string;
+        last_name: string;
+        abbreviation: string;
+        driver_number: number;
+        team_id: string;
+        is_active: boolean;
+    };
+
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             first_name: initialData?.first_name || "",
             last_name: initialData?.last_name || "",

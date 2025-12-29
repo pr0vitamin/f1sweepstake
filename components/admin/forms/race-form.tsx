@@ -33,9 +33,7 @@ const formSchema = z.object({
     name: z.string().min(2, "Name is too short"),
     location: z.string().min(2, "Location is too short"),
     round_number: z.coerce.number().min(1, "Round must be > 0"),
-    race_date: z.date({
-        required_error: "A date of race is required.",
-    }),
+    race_date: z.date({ message: "A date of race is required." }),
     picks_open: z.boolean().default(false),
     results_finalized: z.boolean().default(false),
 });
@@ -49,8 +47,17 @@ export function RaceForm({ initialData, seasonId }: RaceFormProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+    type FormValues = {
+        name: string;
+        location: string;
+        round_number: number;
+        race_date: Date;
+        picks_open: boolean;
+        results_finalized: boolean;
+    };
+
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema) as any,
         defaultValues: {
             name: initialData?.name || "",
             location: initialData?.location || "",
