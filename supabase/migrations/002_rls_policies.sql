@@ -22,6 +22,11 @@ create policy "Anyone can view active profiles"
   on public.profiles for select
   using (is_active = true);
 
+-- Admins can view all profiles (including inactive)
+create policy "Admins can view all profiles"
+  on public.profiles for select
+  using (public.is_admin());
+
 -- Users can update their own profile (display_name only)
 create policy "Users can update own profile"
   on public.profiles for update

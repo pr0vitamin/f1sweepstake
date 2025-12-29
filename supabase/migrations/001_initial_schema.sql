@@ -24,9 +24,14 @@ create table public.seasons (
   id uuid primary key default gen_random_uuid(),
   year integer not null unique,
   is_current boolean not null default false,
+  dnf_points integer not null default -5,
+  dsq_points integer not null default -5,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+comment on column public.seasons.dnf_points is 'Points awarded to drivers who did not finish (DNF)';
+comment on column public.seasons.dsq_points is 'Points awarded to drivers who were disqualified (DSQ)';
 
 alter table public.seasons enable row level security;
 
@@ -89,11 +94,14 @@ create table public.races (
   round_number integer not null,
   results_finalized boolean not null default false,
   picks_open boolean not null default false,
+  draft_order jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   
   unique(season_id, round_number)
 );
+
+comment on column public.races.draft_order is 'Stores the JSON array of draft slots [{userId, displayName, pickOrder, draftRound}, ...]';
 
 alter table public.races enable row level security;
 
