@@ -49,7 +49,7 @@ export function OTPAuthForm({
             const { error } = await supabase.auth.signInWithOtp({
                 email,
                 options: {
-                    shouldCreateUser: false,
+                    shouldCreateUser: true,
                 },
             });
             if (error) throw error;
@@ -96,7 +96,7 @@ export function OTPAuthForm({
             const { error } = await supabase.auth.signInWithOtp({
                 email,
                 options: {
-                    shouldCreateUser: false,
+                    shouldCreateUser: true,
                 },
             });
             if (error) throw error;
