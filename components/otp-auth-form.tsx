@@ -27,6 +27,7 @@ export function OTPAuthForm({
     const [code, setCode] = useState<string[]>(Array(6).fill(""));
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
     const [resendCooldown, setResendCooldown] = useState(0);
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     const router = useRouter();
@@ -77,10 +78,10 @@ export function OTPAuthForm({
                 type: "email",
             });
             if (error) throw error;
+            setIsVerified(true);
             router.push("/dashboard");
         } catch (error: unknown) {
             setError(error instanceof Error ? error.message : "An error occurred");
-        } finally {
             setIsLoading(false);
         }
     };
@@ -195,9 +196,14 @@ export function OTPAuthForm({
                                 <Button
                                     type="submit"
                                     className="w-full"
-                                    disabled={isLoading || code.some((c) => !c)}
+                                    disabled={isLoading || isVerified || code.some((c) => !c)}
                                 >
-                                    {isLoading ? (
+                                    {isVerified ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Redirecting...
+                                        </>
+                                    ) : isLoading ? (
                                         <>
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                             Verifying...
@@ -211,7 +217,7 @@ export function OTPAuthForm({
                                         type="button"
                                         variant="ghost"
                                         onClick={handleResendCode}
-                                        disabled={resendCooldown > 0 || isLoading}
+                                        disabled={resendCooldown > 0 || isLoading || isVerified}
                                     >
                                         {resendCooldown > 0
                                             ? `Resend code in ${resendCooldown}s`
