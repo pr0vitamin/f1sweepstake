@@ -133,6 +133,7 @@ export async function makePick(raceId: string, driverId: string, onBehalfOfUserI
     } else {
         // Draft continues - notify next player it's their turn
         const finalNextSlot = getCurrentPickSlot(draftOrder, updatedCompletedPicks);
+        // Skip notification if same player (snake draft round boundary — e.g. pick 10 → pick 11)
         if (finalNextSlot && finalNextSlot.userId !== targetUserId) {
             const { createNotification } = await import("@/app/(dashboard)/notifications/actions");
             await createNotification(
@@ -142,6 +143,22 @@ export async function makePick(raceId: string, driverId: string, onBehalfOfUserI
                 `It's your turn to pick in the ${race.name} draft. Don't keep everyone waiting!`,
                 { race_id: raceId, race_name: race.name }
             );
+
+            // Send email notification
+            try {
+                const { data: nextProfile } = await supabase
+                    .from("profiles")
+                    .select("email")
+                    .eq("id", finalNextSlot.userId)
+                    .single();
+
+                if (nextProfile?.email) {
+                    const { sendDraftTurnEmail } = await import("@/lib/email");
+                    await sendDraftTurnEmail(nextProfile.email, finalNextSlot.displayName, race.name);
+                }
+            } catch (emailError) {
+                console.error("[makePick] Failed to send email notification:", emailError);
+            }
         }
     }
 

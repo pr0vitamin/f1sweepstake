@@ -282,6 +282,10 @@ export function ResultsManager({
                             `The next race is ${nextRace.name} and drafting is now open. Make sure to get your picks done by ${raceDate}!`,
                             { race_id: nextRace.id, race_name: nextRace.name }
                         );
+
+                        // Email the first picker for the next race
+                        const { notifyFirstPicker } = await import("@/app/(dashboard)/draft/notify-first-picker");
+                        await notifyFirstPicker(nextRace.id);
                     }
                 }
 

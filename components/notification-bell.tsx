@@ -44,7 +44,10 @@ export function NotificationBell() {
     useEffect(() => {
         fetchNotifications();
 
-        // Subscribe to real-time notifications
+        // Poll every 30 seconds as a reliable fallback
+        const pollInterval = setInterval(fetchNotifications, 30_000);
+
+        // Also subscribe to real-time notifications (if Realtime is enabled for the table)
         const supabase = createClient();
         const channel = supabase
             .channel('notifications')
@@ -58,6 +61,7 @@ export function NotificationBell() {
             .subscribe();
 
         return () => {
+            clearInterval(pollInterval);
             supabase.removeChannel(channel);
         };
     }, []);

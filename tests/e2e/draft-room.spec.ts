@@ -120,10 +120,10 @@ test.describe.serial('Draft Room', () => {
         await expect(page.getByText(TEST_DRIVER.last_name)).toBeVisible({ timeout: 10000 });
     });
 
-    test('copy for teams button works', async ({ page }) => {
+    test('copy pick order button works', async ({ page }) => {
         await page.goto('/draft');
 
-        const copyButton = page.getByRole('button', { name: /Copy for Teams/i });
+        const copyButton = page.getByRole('button', { name: /Copy Pick Order/i });
         await expect(copyButton).toBeVisible({ timeout: 10000 });
 
         await copyButton.click();

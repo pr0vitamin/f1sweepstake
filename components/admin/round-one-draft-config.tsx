@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { createNotificationForAll } from "@/app/(dashboard)/notifications/actions";
+import { notifyFirstPicker } from "@/app/(dashboard)/draft/notify-first-picker";
 import { format, parseISO } from "date-fns";
 
 interface RoundOneDraftConfigProps {
@@ -48,6 +49,9 @@ export function RoundOneDraftConfig({ raceId, raceName, raceDate, initialDraftOr
                     `The next race is ${raceName} and drafting is now open! Make sure to get your picks done by ${formattedDate}`,
                     { race_id: raceId, race_name: raceName }
                 );
+
+                // Email the first picker
+                await notifyFirstPicker(raceId);
 
                 router.refresh();
             }

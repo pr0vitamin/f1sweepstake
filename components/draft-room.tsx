@@ -176,7 +176,7 @@ export function DraftRoom({
                     </div>
                     <Button variant="outline" onClick={handleCopyOrder} size="sm">
                         {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                        {copied ? "Copied!" : "Copy for Teams"}
+                        {copied ? "Copied!" : "Copy Pick Order"}
                     </Button>
                 </div>
 
