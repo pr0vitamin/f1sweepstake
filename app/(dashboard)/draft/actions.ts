@@ -126,10 +126,7 @@ export async function makePick(raceId: string, driverId: string, onBehalfOfUserI
 
     // 8. If draft is complete (no more slots), auto-close picks
     if (draftComplete) {
-        await supabase
-            .from("races")
-            .update({ picks_open: false })
-            .eq("id", raceId);
+        await supabase.rpc('close_draft', { p_race_id: raceId });
     } else {
         // Draft continues - notify next player it's their turn
         const finalNextSlot = getCurrentPickSlot(draftOrder, updatedCompletedPicks);
