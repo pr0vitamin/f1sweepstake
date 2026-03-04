@@ -102,15 +102,13 @@ export async function makePick(raceId: string, driverId: string, onBehalfOfUserI
             // If only 1 driver left, auto-assign to next player
             if (remainingDrivers.length === 1) {
                 const lastDriver = remainingDrivers[0];
-                await supabase
-                    .from("picks")
-                    .insert({
-                        race_id: raceId,
-                        user_id: nextSlot.userId,
-                        driver_id: lastDriver.id,
-                        pick_order: nextSlot.pickOrder,
-                        draft_round: nextSlot.draftRound
-                    });
+                await supabase.rpc('auto_assign_pick', {
+                    p_race_id: raceId,
+                    p_user_id: nextSlot.userId,
+                    p_driver_id: lastDriver.id,
+                    p_pick_order: nextSlot.pickOrder,
+                    p_draft_round: nextSlot.draftRound
+                });
 
                 // After auto-assign, check if draft is now complete
                 const finalPicks = [...updatedPicks, { driver_id: lastDriver.id, user_id: nextSlot.userId, draft_round: nextSlot.draftRound, pick_order: nextSlot.pickOrder }];
