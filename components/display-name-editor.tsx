@@ -63,7 +63,7 @@ export function DisplayNameEditor({ currentName }: DisplayNameEditorProps) {
             }
         }}>
             <DialogTrigger asChild>
-                <button className="group flex items-center gap-1.5 text-sm font-medium whitespace-nowrap hidden md:inline-flex hover:text-primary transition-colors">
+                <button className="group flex items-center gap-1.5 text-sm font-medium whitespace-nowrap hover:text-primary transition-colors">
                     Hey, {currentName}!
                     <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
                 </button>
