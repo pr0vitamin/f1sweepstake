@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DraftRoom } from "@/components/draft-room";
 import { DraftOrderEntry } from "@/lib/draft-order";
-import { DriverWithTeam, Pick } from "@/lib/types/database";
+import { DriverWithTeam, Pick, Profile } from "@/lib/types/database";
 
 export default async function DraftPage() {
     const supabase = await createClient();
@@ -92,12 +92,18 @@ export default async function DraftPage() {
         return (a.driver_number || 0) - (b.driver_number || 0);
     });
 
-    // 5. Check if current user is admin
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", user.id)
-        .single();
+    // 5. Check if current user is admin and fetch all profiles for live name resolution
+    const [{ data: profile }, { data: profiles }] = await Promise.all([
+        supabase
+            .from("profiles")
+            .select("is_admin")
+            .eq("id", user.id)
+            .single(),
+        supabase
+            .from("profiles")
+            .select("id, display_name")
+            .eq("is_active", true)
+    ]);
 
     const isAdmin = profile?.is_admin ?? false;
     const isReadOnly = !race.picks_open; // Read-only if picks are closed
@@ -113,6 +119,7 @@ export default async function DraftPage() {
                 currentUserId={user.id}
                 isAdmin={isAdmin}
                 isReadOnly={isReadOnly}
+                profiles={(profiles || []) as { id: string; display_name: string }[]}
             />
         </div>
     );

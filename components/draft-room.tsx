@@ -30,6 +30,7 @@ interface DraftRoomProps {
     currentUserId: string;
     isAdmin?: boolean;
     isReadOnly?: boolean;
+    profiles?: { id: string; display_name: string }[];
 }
 
 export function DraftRoom({
@@ -40,7 +41,8 @@ export function DraftRoom({
     availableDrivers,
     currentUserId,
     isAdmin = false,
-    isReadOnly = false
+    isReadOnly = false,
+    profiles = []
 }: DraftRoomProps) {
     const [picks, setPicks] = useState(initialPicks);
     const [drivers, setDrivers] = useState(availableDrivers);
@@ -58,6 +60,10 @@ export function DraftRoom({
     }));
 
     const currentSlot = getCurrentPickSlot(draftOrder, completedPicks);
+
+    // Resolve display names from live profiles, falling back to draft order snapshot
+    const profileMap = new Map(profiles.map(p => [p.id, p.display_name]));
+    const getName = (slot: DraftOrderEntry) => profileMap.get(slot.userId) || slot.displayName;
     const isMyTurn = currentSlot?.userId === currentUserId;
     const isDraftComplete = currentSlot === null;
 
@@ -170,7 +176,7 @@ export function DraftRoom({
                         ) : (
                             <p className="text-sm text-muted-foreground mt-1">
                                 <Clock className="inline mr-1 h-3 w-3" />
-                                Waiting for {currentSlot?.displayName}...
+                                Waiting for {currentSlot ? getName(currentSlot) : ''}...
                             </p>
                         )}
                     </div>
@@ -209,7 +215,7 @@ export function DraftRoom({
                                             htmlFor="pickOnBehalf"
                                             className="text-sm font-medium text-amber-800 dark:text-amber-200 cursor-pointer"
                                         >
-                                            Pick on behalf of {currentSlot?.displayName}
+                                            Pick on behalf of {currentSlot ? getName(currentSlot) : ''}
                                         </label>
                                     </div>
                                 </div>
@@ -221,7 +227,7 @@ export function DraftRoom({
                                         ? picks.find(p => p.driver_id === driver.id)
                                         : null;
                                     const pickedByName = pickedBy
-                                        ? draftOrder.find(s => s.userId === pickedBy.user_id)?.displayName
+                                        ? (() => { const s = draftOrder.find(s => s.userId === pickedBy.user_id); return s ? getName(s) : undefined; })()
                                         : null;
 
                                     return (
@@ -294,7 +300,7 @@ export function DraftRoom({
                                                     {slot.pickOrder}
                                                 </Badge>
                                                 <span className={`flex-1 ${slot.userId === currentUserId ? 'font-medium' : ''}`}>
-                                                    {slot.displayName}
+                                                    {getName(slot)}
                                                 </span>
                                                 {pick ? (
                                                     <Badge
@@ -334,7 +340,7 @@ export function DraftRoom({
                                                     {slot.pickOrder}
                                                 </Badge>
                                                 <span className={`flex-1 ${slot.userId === currentUserId ? 'font-medium' : ''}`}>
-                                                    {slot.displayName}
+                                                    {getName(slot)}
                                                 </span>
                                                 {pick ? (
                                                     <Badge
