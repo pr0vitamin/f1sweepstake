@@ -4,6 +4,7 @@ import { MainNav } from "@/components/main-nav";
 import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { NotificationBell } from "@/components/notification-bell";
+import { NavOverflowMenu } from "@/components/nav-overflow-menu";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Settings } from "lucide-react";
@@ -28,6 +29,8 @@ export default async function DashboardLayout({
         .eq("id", user.id)
         .single();
 
+    const displayName = profile?.display_name || user.email || "Racer";
+
     return (
         <main className="min-h-screen flex flex-col">
             <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -50,10 +53,15 @@ export default async function DashboardLayout({
                             </Link>
                         )}
                         <NotificationBell />
-                        <Suspense fallback={<div className="h-8 w-8 rounded-full bg-muted animate-pulse" />}>
-                            <AuthButton />
-                        </Suspense>
-                        <ThemeSwitcher />
+                        {/* Desktop: show inline */}
+                        <div className="hidden md:flex items-center gap-2">
+                            <Suspense fallback={<div className="h-8 w-8 rounded-full bg-muted animate-pulse" />}>
+                                <AuthButton />
+                            </Suspense>
+                            <ThemeSwitcher />
+                        </div>
+                        {/* Mobile: overflow menu */}
+                        <NavOverflowMenu displayName={displayName} />
                     </div>
                 </div>
             </header>
@@ -68,3 +76,4 @@ export default async function DashboardLayout({
         </main>
     );
 }
+
