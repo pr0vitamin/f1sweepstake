@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "./logout-button";
+import { DisplayNameEditor } from "./display-name-editor";
 
 export async function AuthButton() {
   const supabase = await createClient();
@@ -28,14 +29,13 @@ export async function AuthButton() {
     .eq("id", user.id)
     .single();
 
-  const displayName = profile?.display_name || user.email;
+  const displayName = profile?.display_name || user.email || "Racer";
 
   return (
     <div className="flex items-center gap-4">
-      <span className="text-sm font-medium whitespace-nowrap hidden md:inline-block">
-        Hey, {displayName}!
-      </span>
+      <DisplayNameEditor currentName={displayName} />
       <LogoutButton />
     </div>
   );
 }
+
