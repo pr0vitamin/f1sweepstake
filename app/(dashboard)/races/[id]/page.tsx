@@ -65,7 +65,7 @@ export default async function RaceDetailPage({ params }: Props) {
 
         let points = 0;
         let position = result.position;
-        let status = `P${position}`;
+        let status = position !== null ? `P${position}` : "N/C";
 
         if (result.dsq) {
             points = dsqPoints;
@@ -73,9 +73,9 @@ export default async function RaceDetailPage({ params }: Props) {
         } else if (result.dns) {
             points = dnfPoints;
             status = "DNS";
-        } else if (result.dnf) {
+        } else if (result.dnf || position === null) {
             points = dnfPoints;
-            status = "DNF";
+            status = result.dnf ? "DNF" : "N/C";
         } else {
             const mapping = pointMappings?.find(m => m.position === position);
             points = mapping?.points ?? 0;
@@ -268,7 +268,7 @@ export default async function RaceDetailPage({ params }: Props) {
                                                             result.position === 3 ? "bg-amber-700 text-white border-amber-800" : ""
                                                         }`}
                                                 >
-                                                    {result.dnf ? "DNF" : result.dns ? "DNS" : result.dsq ? "DSQ" : `P${result.position}`}
+                                                    {result.dnf ? "DNF" : result.dns ? "DNS" : result.dsq ? "DSQ" : result.position !== null ? `P${result.position}` : "N/C"}
                                                 </Badge>
                                                 <div
                                                     className="w-6 h-6 rounded flex items-center justify-center text-white font-bold text-xs"

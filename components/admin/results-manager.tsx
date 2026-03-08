@@ -122,7 +122,7 @@ export function ResultsManager({
             const preview: ImportPreviewRow[] = results.map(r => ({
                 position: r.position,
                 driverNumber: r.driver_number,
-                dnf: r.dnf,
+                dnf: r.dnf || (!r.dsq && !r.dns && r.position === null),
                 dns: r.dns,
                 dsq: r.dsq,
                 matchedDriver: drivers.find(d => d.driver_number === r.driver_number) || null,
