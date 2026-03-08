@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getPointsForPosition } from "@/lib/scoring";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy } from "lucide-react";
@@ -67,17 +68,15 @@ export default async function LeaderboardPage() {
             );
 
             if (result) {
-                let points = 0;
-                if (result.dsq) {
-                    const worst = mappings.reduce((min, m) => m.points < min.points ? m : min, mappings[0]);
-                    points = worst?.points || 0;
-                } else if (result.dnf) {
-                    const sorted = [...mappings].sort((a, b) => a.points - b.points);
-                    points = sorted[1]?.points || sorted[0]?.points || 0;
-                } else if (result.position) {
-                    const mapping = mappings.find(m => m.position === result.position);
-                    points = mapping?.points || 0;
-                }
+                const points = getPointsForPosition(
+                    result.position,
+                    mappings,
+                    result.dnf,
+                    result.dsq,
+                    result.dns,
+                    season.dnf_points ?? -5,
+                    season.dsq_points ?? -5
+                );
 
                 const existing = standingsMap.get(pick.user_id) || {
                     displayName: pick.profile?.display_name || 'Unknown',
@@ -128,16 +127,16 @@ export default async function LeaderboardPage() {
                                 <div
                                     key={entry.userId}
                                     className={`flex items-center justify-between p-4 rounded-lg ${index === 0 ? 'bg-yellow-500/10 border border-yellow-500/30' :
-                                            index === 1 ? 'bg-slate-300/10 border border-slate-400/30' :
-                                                index === 2 ? 'bg-orange-500/10 border border-orange-500/30' :
-                                                    'bg-muted/30'
+                                        index === 1 ? 'bg-slate-300/10 border border-slate-400/30' :
+                                            index === 2 ? 'bg-orange-500/10 border border-orange-500/30' :
+                                                'bg-muted/30'
                                         }`}
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
-                                                index === 1 ? 'bg-slate-400 text-black' :
-                                                    index === 2 ? 'bg-orange-500 text-black' :
-                                                        'bg-muted text-muted-foreground'
+                                            index === 1 ? 'bg-slate-400 text-black' :
+                                                index === 2 ? 'bg-orange-500 text-black' :
+                                                    'bg-muted text-muted-foreground'
                                             }`}>
                                             {index + 1}
                                         </div>
