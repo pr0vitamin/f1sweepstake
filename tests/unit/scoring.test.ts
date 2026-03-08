@@ -68,8 +68,8 @@ describe('getPointsForPosition', () => {
         expect(getPointsForPosition(20, mockPointMappings)).toBe(-5);
     });
 
-    it('returns 0 for null position', () => {
-        expect(getPointsForPosition(null, mockPointMappings)).toBe(0);
+    it('returns DNF points for null position (unclassified)', () => {
+        expect(getPointsForPosition(null, mockPointMappings)).toBe(-5);
     });
 
     it('returns configured points for DSQ', () => {

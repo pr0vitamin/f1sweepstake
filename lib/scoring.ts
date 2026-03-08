@@ -42,7 +42,8 @@ export function getPointsForPosition(
     }
 
     // Normal finish - look up points for position
-    if (position === null) return 0;
+    // If position is null with no flags set (e.g. not enough laps for classification), treat as DNF
+    if (position === null) return dnfPoints;
 
     const mapping = pointMappings.find(pm => pm.position === position);
     return mapping?.points ?? 0;
