@@ -70,6 +70,9 @@ export default async function RaceDetailPage({ params }: Props) {
         if (result.dsq) {
             points = dsqPoints;
             status = "DSQ";
+        } else if (result.dns) {
+            points = dnfPoints;
+            status = "DNS";
         } else if (result.dnf) {
             points = dnfPoints;
             status = "DNF";
@@ -265,7 +268,7 @@ export default async function RaceDetailPage({ params }: Props) {
                                                             result.position === 3 ? "bg-amber-700 text-white border-amber-800" : ""
                                                         }`}
                                                 >
-                                                    {result.dnf ? "DNF" : result.dsq ? "DSQ" : `P${result.position}`}
+                                                    {result.dnf ? "DNF" : result.dns ? "DNS" : result.dsq ? "DSQ" : `P${result.position}`}
                                                 </Badge>
                                                 <div
                                                     className="w-6 h-6 rounded flex items-center justify-center text-white font-bold text-xs"

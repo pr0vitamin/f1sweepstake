@@ -133,6 +133,7 @@ export interface RaceResult {
   driver_id: UUID;
   position: number | null;
   dnf: boolean;
+  dns: boolean;
   dsq: boolean;
   created_at: Timestamp;
 }

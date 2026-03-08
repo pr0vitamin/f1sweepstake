@@ -13,7 +13,8 @@ import type { PointMapping, RaceResult, Pick, PickWithDetails } from '@/lib/type
  * @param pointMappings - The position-to-points mapping for the season
  * @param dnf - Whether the driver did not finish
  * @param dsq - Whether the driver was disqualified
- * @param dnfPoints - Points awarded for DNF (from season config)
+ * @param dns - Whether the driver did not start
+ * @param dnfPoints - Points awarded for DNF/DNS (from season config)
  * @param dsqPoints - Points awarded for DSQ (from season config)
  */
 export function getPointsForPosition(
@@ -21,12 +22,18 @@ export function getPointsForPosition(
     pointMappings: PointMapping[],
     dnf: boolean = false,
     dsq: boolean = false,
+    dns: boolean = false,
     dnfPoints: number = -5,
     dsqPoints: number = -5
 ): number {
     // DSQ drivers get the configured DSQ points
     if (dsq) {
         return dsqPoints;
+    }
+
+    // DNS drivers get the same points as DNF
+    if (dns) {
+        return dnfPoints;
     }
 
     // DNF drivers get the configured DNF points
@@ -61,6 +68,7 @@ export function calculateRacePoints(
                 pointMappings,
                 result.dnf,
                 result.dsq,
+                result.dns,
                 dnfPoints,
                 dsqPoints
             );

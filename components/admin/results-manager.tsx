@@ -44,6 +44,7 @@ interface ImportPreviewRow {
     position: number | null;
     driverNumber: number;
     dnf: boolean;
+    dns: boolean;
     dsq: boolean;
     matchedDriver: (Driver & { team: { name: string; color: string } }) | null;
 }
@@ -53,6 +54,7 @@ interface ManualEntryRow {
     driver: Driver & { team: { name: string; color: string } };
     position: string;
     dnf: boolean;
+    dns: boolean;
     dsq: boolean;
 }
 
@@ -86,6 +88,7 @@ export function ResultsManager({
             driver: d,
             position: "",
             dnf: false,
+            dns: false,
             dsq: false,
         }))
     );
@@ -115,17 +118,18 @@ export function ResultsManager({
         try {
             const results = await getSessionResult(parseInt(selectedSessionKey));
 
-            // Match drivers and sort (DNF/DSQ at bottom)
+            // Match drivers and sort (DNF/DSQ/DNS at bottom)
             const preview: ImportPreviewRow[] = results.map(r => ({
                 position: r.position,
                 driverNumber: r.driver_number,
                 dnf: r.dnf,
+                dns: r.dns,
                 dsq: r.dsq,
                 matchedDriver: drivers.find(d => d.driver_number === r.driver_number) || null,
             })).sort((a, b) => {
-                // Put DNF/DSQ at bottom
-                const aIsRetired = a.dnf || a.dsq || a.position === null;
-                const bIsRetired = b.dnf || b.dsq || b.position === null;
+                // Put DNF/DSQ/DNS at bottom
+                const aIsRetired = a.dnf || a.dsq || a.dns || a.position === null;
+                const bIsRetired = b.dnf || b.dsq || b.dns || b.position === null;
                 if (aIsRetired && !bIsRetired) return 1;
                 if (!aIsRetired && bIsRetired) return -1;
                 // Sort by position (null positions go to end)
@@ -174,6 +178,7 @@ export function ResultsManager({
                         driver_id: r.matchedDriver!.id,
                         position: r.position,
                         dnf: r.dnf,
+                        dns: r.dns,
                         dsq: r.dsq,
                     }));
 
@@ -317,9 +322,9 @@ export function ResultsManager({
 
     // Save manual results
     const handleSaveManualResults = async () => {
-        // Validate: at least one driver must have a position or be DNF/DSQ
+        // Validate: at least one driver must have a position or be DNF/DSQ/DNS
         const filledResults = manualResults.filter(
-            r => r.position !== "" || r.dnf || r.dsq
+            r => r.position !== "" || r.dnf || r.dsq || r.dns
         );
 
         if (filledResults.length === 0) {
@@ -329,8 +334,8 @@ export function ResultsManager({
 
         // Validate positions
         for (const result of filledResults) {
-            if (!result.dnf && !result.dsq && result.position === "") {
-                setError(`Please enter a position for ${result.driver.first_name} ${result.driver.last_name} or mark as DNF/DSQ`);
+            if (!result.dnf && !result.dsq && !result.dns && result.position === "") {
+                setError(`Please enter a position for ${result.driver.first_name} ${result.driver.last_name} or mark as DNF/DSQ/DNS`);
                 return;
             }
             if (result.position !== "" && (isNaN(parseInt(result.position)) || parseInt(result.position) < 1)) {
@@ -354,8 +359,9 @@ export function ResultsManager({
                 const resultsToInsert = filledResults.map(r => ({
                     race_id: race.id,
                     driver_id: r.driverId,
-                    position: r.dnf || r.dsq ? null : parseInt(r.position),
+                    position: r.dnf || r.dsq || r.dns ? null : parseInt(r.position),
                     dnf: r.dnf,
+                    dns: r.dns,
                     dsq: r.dsq,
                 }));
 
@@ -443,8 +449,9 @@ export function ResultsManager({
                                         </TableCell>
                                         <TableCell>
                                             {result.dnf && <Badge variant="destructive">DNF</Badge>}
+                                            {result.dns && <Badge variant="destructive">DNS</Badge>}
                                             {result.dsq && <Badge variant="destructive">DSQ</Badge>}
-                                            {!result.dnf && !result.dsq && <Badge variant="outline">OK</Badge>}
+                                            {!result.dnf && !result.dns && !result.dsq && <Badge variant="outline">OK</Badge>}
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -567,8 +574,9 @@ export function ResultsManager({
                                                 </TableCell>
                                                 <TableCell>
                                                     {row.dnf && <Badge variant="destructive">DNF</Badge>}
+                                                    {row.dns && <Badge variant="destructive">DNS</Badge>}
                                                     {row.dsq && <Badge variant="destructive">DSQ</Badge>}
-                                                    {!row.dnf && !row.dsq && <Badge variant="outline">OK</Badge>}
+                                                    {!row.dnf && !row.dns && !row.dsq && <Badge variant="outline">OK</Badge>}
                                                 </TableCell>
                                                 <TableCell>
                                                     {row.matchedDriver ? (
@@ -631,6 +639,7 @@ export function ResultsManager({
                                         <TableHead>Team</TableHead>
                                         <TableHead className="w-24">Position</TableHead>
                                         <TableHead className="w-16 text-center">DNF</TableHead>
+                                        <TableHead className="w-16 text-center">DNS</TableHead>
                                         <TableHead className="w-16 text-center">DSQ</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -653,7 +662,7 @@ export function ResultsManager({
                                                     className="w-16"
                                                     value={row.position}
                                                     onChange={(e) => updateManualRow(row.driverId, "position", e.target.value)}
-                                                    disabled={row.dnf || row.dsq}
+                                                    disabled={row.dnf || row.dsq || row.dns}
                                                     min={1}
                                                 />
                                             </TableCell>
@@ -662,7 +671,22 @@ export function ResultsManager({
                                                     checked={row.dnf}
                                                     onCheckedChange={(checked) => {
                                                         updateManualRow(row.driverId, "dnf", !!checked);
-                                                        if (checked) updateManualRow(row.driverId, "dsq", false);
+                                                        if (checked) {
+                                                            updateManualRow(row.driverId, "dsq", false);
+                                                            updateManualRow(row.driverId, "dns", false);
+                                                        }
+                                                    }}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Checkbox
+                                                    checked={row.dns}
+                                                    onCheckedChange={(checked) => {
+                                                        updateManualRow(row.driverId, "dns", !!checked);
+                                                        if (checked) {
+                                                            updateManualRow(row.driverId, "dnf", false);
+                                                            updateManualRow(row.driverId, "dsq", false);
+                                                        }
                                                     }}
                                                 />
                                             </TableCell>
@@ -671,7 +695,10 @@ export function ResultsManager({
                                                     checked={row.dsq}
                                                     onCheckedChange={(checked) => {
                                                         updateManualRow(row.driverId, "dsq", !!checked);
-                                                        if (checked) updateManualRow(row.driverId, "dnf", false);
+                                                        if (checked) {
+                                                            updateManualRow(row.driverId, "dnf", false);
+                                                            updateManualRow(row.driverId, "dns", false);
+                                                        }
                                                     }}
                                                 />
                                             </TableCell>

@@ -76,14 +76,21 @@ describe('getPointsForPosition', () => {
         // Default DSQ points (-5)
         expect(getPointsForPosition(1, mockPointMappings, false, true)).toBe(-5);
         // Custom DSQ points
-        expect(getPointsForPosition(1, mockPointMappings, false, true, -5, -10)).toBe(-10);
+        expect(getPointsForPosition(1, mockPointMappings, false, true, false, -5, -10)).toBe(-10);
     });
 
     it('returns configured points for DNF', () => {
         // Default DNF points (-5)
         expect(getPointsForPosition(1, mockPointMappings, true, false)).toBe(-5);
         // Custom DNF points
-        expect(getPointsForPosition(1, mockPointMappings, true, false, -8, -5)).toBe(-8);
+        expect(getPointsForPosition(1, mockPointMappings, true, false, false, -8, -5)).toBe(-8);
+    });
+
+    it('returns configured points for DNS (same as DNF)', () => {
+        // Default DNS points (same as DNF: -5)
+        expect(getPointsForPosition(1, mockPointMappings, false, false, true)).toBe(-5);
+        // Custom DNS points (uses dnfPoints)
+        expect(getPointsForPosition(1, mockPointMappings, false, false, true, -8, -5)).toBe(-8);
     });
 });
 
@@ -95,8 +102,8 @@ describe('calculateRacePoints', () => {
         ];
 
         const raceResults: RaceResult[] = [
-            { id: 'rr1', race_id: 'r1', driver_id: 'd1', position: 1, dnf: false, dsq: false, created_at: '' },
-            { id: 'rr2', race_id: 'r1', driver_id: 'd2', position: 3, dnf: false, dsq: false, created_at: '' },
+            { id: 'rr1', race_id: 'r1', driver_id: 'd1', position: 1, dnf: false, dns: false, dsq: false, created_at: '' },
+            { id: 'rr2', race_id: 'r1', driver_id: 'd2', position: 3, dnf: false, dns: false, dsq: false, created_at: '' },
         ];
 
         const points = calculateRacePoints(picks, raceResults, mockPointMappings);
@@ -121,8 +128,8 @@ describe('calculateRacePoints', () => {
         ];
 
         const raceResults: RaceResult[] = [
-            { id: 'rr1', race_id: 'r1', driver_id: 'd1', position: 1, dnf: false, dsq: false, created_at: '' },
-            { id: 'rr2', race_id: 'r1', driver_id: 'd2', position: 20, dnf: false, dsq: false, created_at: '' },
+            { id: 'rr1', race_id: 'r1', driver_id: 'd1', position: 1, dnf: false, dns: false, dsq: false, created_at: '' },
+            { id: 'rr2', race_id: 'r1', driver_id: 'd2', position: 20, dnf: false, dns: false, dsq: false, created_at: '' },
         ];
 
         const points = calculateRacePoints(picks, raceResults, mockPointMappings);
@@ -153,8 +160,8 @@ describe('calculateRaceLeaderboard', () => {
         ];
 
         const raceResults: RaceResult[] = [
-            { id: 'rr1', race_id: 'r1', driver_id: 'd1', position: 1, dnf: false, dsq: false, created_at: '' },
-            { id: 'rr2', race_id: 'r1', driver_id: 'd2', position: 10, dnf: false, dsq: false, created_at: '' },
+            { id: 'rr1', race_id: 'r1', driver_id: 'd1', position: 1, dnf: false, dns: false, dsq: false, created_at: '' },
+            { id: 'rr2', race_id: 'r1', driver_id: 'd2', position: 10, dnf: false, dns: false, dsq: false, created_at: '' },
         ];
 
         const leaderboard = calculateRaceLeaderboard(allPicks, raceResults, mockPointMappings);
