@@ -85,7 +85,8 @@ export default async function RaceDetailPage({ params }: Props) {
     };
 
     const raceDate = parseISO(race.race_date);
-    const isPast = raceDate < new Date();
+    const today = new Date().toISOString().split('T')[0];
+    const isPast = race.race_date < today;
 
     // Calculate total points for user
     const totalPoints = userPicks.reduce((sum, pick) => {

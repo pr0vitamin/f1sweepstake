@@ -45,7 +45,8 @@ export default async function RacesPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {races?.map(race => {
                     const raceDate = parseISO(race.race_date);
-                    const isPast = raceDate < new Date();
+                    const today = new Date().toISOString().split('T')[0];
+                    const isPast = race.race_date < today;
 
                     // Determine status
                     let status: 'completed' | 'drafting' | 'pending' | 'upcoming';
