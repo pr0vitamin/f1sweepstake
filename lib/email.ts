@@ -26,8 +26,8 @@ export async function sendDraftTurnEmail(
     playerName: string,
     raceName: string
 ): Promise<boolean> {
-    const appUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
+    const appUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
         : 'http://localhost:3000';
     const draftUrl = `${appUrl}/draft`;
 
