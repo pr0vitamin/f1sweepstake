@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { findAmbiguousSeatDrivers } from "@/lib/scoring";
 import { Race, Driver, RaceResult, DriverSubstitutionWithDrivers } from "@/lib/types/database";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -44,10 +45,10 @@ export function SubstitutionsManager({
     const usedSeatIds = new Set(substitutions.map(s => s.seat_driver_id));
     const usedSubstituteIds = new Set(substitutions.map(s => s.substitute_driver_id));
 
-    // Inconsistency warning: a seat driver who also has their own result row
-    const conflictingSubs = substitutions.filter(s =>
-        existingResults.some(r => r.driver_id === s.seat_driver_id)
-    );
+    // Inconsistency warning: a seat driver whose own result row would survive
+    // resolution (chained swaps, where the seat driver drove another seat, are fine)
+    const ambiguousSeatIds = new Set(findAmbiguousSeatDrivers(existingResults, substitutions));
+    const conflictingSubs = substitutions.filter(s => ambiguousSeatIds.has(s.seat_driver_id));
 
     const handleAdd = () => {
         if (!seatDriverId || !substituteDriverId) return;
