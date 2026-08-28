@@ -61,6 +61,19 @@ export async function deleteDriver(driverId: string): Promise<{ success: boolean
         };
     }
 
+    // Check if driver has any substitutions (as seat driver or substitute)
+    const { count: substitutionsCount } = await supabase
+        .from("driver_substitutions")
+        .select("*", { count: "exact", head: true })
+        .or(`seat_driver_id.eq.${driverId},substitute_driver_id.eq.${driverId}`);
+
+    if (substitutionsCount && substitutionsCount > 0) {
+        return {
+            success: false,
+            error: "Cannot delete driver with recorded substitutions.",
+        };
+    }
+
     const { error } = await supabase
         .from("drivers")
         .delete()

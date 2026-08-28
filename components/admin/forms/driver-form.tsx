@@ -236,7 +236,7 @@ export function DriverForm({ initialData, teams }: DriverFormProps) {
                             </FormControl>
                             <div className="space-y-1 leading-none">
                                 <FormLabel>Substitute / reserve driver</FormLabel>
-                                <FormDescription>Substitute drivers can appear in race results but are excluded from the draft pool.</FormDescription>
+                                <FormDescription>Substitute drivers can appear in race results but are excluded from the draft pool. Keep them Active so race results can match them.</FormDescription>
                             </div>
                         </FormItem>
                     )}
