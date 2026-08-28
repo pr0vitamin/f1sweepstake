@@ -4,8 +4,9 @@ import {
     calculateRacePoints,
     calculateRaceLeaderboard,
     calculateSeasonStandings,
+    applySubstitutions,
 } from '@/lib/scoring';
-import type { PointMapping, RaceResult, Pick, PickWithDetails, Profile, Driver, Team } from '@/lib/types/database';
+import type { PointMapping, RaceResult, Pick, PickWithDetails, Profile, Driver, Team, DriverSubstitution } from '@/lib/types/database';
 
 // Test fixtures
 const mockPointMappings: PointMapping[] = [
@@ -37,6 +38,7 @@ const mockDriver = (id: string, number: number): Driver => ({
     last_name: `${number}`,
     abbreviation: `D${number}`,
     is_active: true,
+    is_substitute: false,
     created_at: '',
     updated_at: '',
 });
@@ -225,5 +227,98 @@ describe('calculateSeasonStandings', () => {
         expect(standings[0].racePoints).toHaveLength(2);
         expect(standings[0].racePoints[0].raceName).toBe('Bahrain GP');
         expect(standings[0].racePoints[0].points).toBe(25);
+    });
+});
+
+// Test fixtures for applySubstitutions
+const mockSub = (raceId: string, seatId: string, subId: string): DriverSubstitution => ({
+    id: `sub-${seatId}-${subId}`,
+    race_id: raceId,
+    seat_driver_id: seatId,
+    substitute_driver_id: subId,
+    created_at: '',
+});
+
+const mockResult = (raceId: string, driverId: string, position: number | null, flags: Partial<RaceResult> = {}): RaceResult => ({
+    id: `res-${raceId}-${driverId}`,
+    race_id: raceId,
+    driver_id: driverId,
+    position,
+    dnf: false,
+    dns: false,
+    dsq: false,
+    created_at: '',
+    ...flags,
+});
+
+describe('applySubstitutions', () => {
+    it('returns results unchanged when there are no substitutions', () => {
+        const results = [mockResult('r1', 'd1', 1), mockResult('r1', 'd2', 2)];
+        expect(applySubstitutions(results, [])).toEqual(results);
+    });
+
+    it('re-keys a substitute result row to the seat driver', () => {
+        // sub drove seat-driver d1's car and finished P4
+        const results = [mockResult('r1', 'sub1', 4), mockResult('r1', 'd2', 2)];
+        const subs = [mockSub('r1', 'd1', 'sub1')];
+
+        const resolved = applySubstitutions(results, subs);
+
+        expect(resolved.find(r => r.driver_id === 'd1')?.position).toBe(4);
+        expect(resolved.find(r => r.driver_id === 'sub1')).toBeUndefined();
+        expect(resolved.find(r => r.driver_id === 'd2')?.position).toBe(2);
+    });
+
+    it('preserves DNF/DNS/DSQ flags when re-keying', () => {
+        const results = [mockResult('r1', 'sub1', null, { dnf: true })];
+        const subs = [mockSub('r1', 'd1', 'sub1')];
+
+        const resolved = applySubstitutions(results, subs);
+
+        expect(resolved.find(r => r.driver_id === 'd1')?.dnf).toBe(true);
+    });
+
+    it('resolves chained substitutions in a single pass (no transitivity)', () => {
+        // A subs for injured B; reserve C subs for A's old seat.
+        // A finished P3, C finished P10. B's picker gets P3; A's picker gets P10.
+        const results = [mockResult('r1', 'A', 3), mockResult('r1', 'C', 10)];
+        const subs = [mockSub('r1', 'B', 'A'), mockSub('r1', 'A', 'C')];
+
+        const resolved = applySubstitutions(results, subs);
+
+        expect(resolved.find(r => r.driver_id === 'B')?.position).toBe(3);
+        expect(resolved.find(r => r.driver_id === 'A')?.position).toBe(10);
+        expect(resolved.find(r => r.driver_id === 'C')).toBeUndefined();
+    });
+
+    it('leaves a substitution without a matching result row inert (seat scores nothing)', () => {
+        const results = [mockResult('r1', 'd2', 2)];
+        const subs = [mockSub('r1', 'd1', 'sub1')]; // sub1 has no result row
+
+        const resolved = applySubstitutions(results, subs);
+
+        expect(resolved).toHaveLength(1);
+        expect(resolved.find(r => r.driver_id === 'd1')).toBeUndefined();
+        expect(resolved.find(r => r.driver_id === 'd2')?.position).toBe(2);
+    });
+
+    it('scopes substitutions to their race in multi-race input', () => {
+        // sub1 subbed for d1 only in r1; in r2 sub1's own row must stay untouched
+        const results = [mockResult('r1', 'sub1', 5), mockResult('r2', 'sub1', 7)];
+        const subs = [mockSub('r1', 'd1', 'sub1')];
+
+        const resolved = applySubstitutions(results, subs);
+
+        expect(resolved.find(r => r.race_id === 'r1' && r.driver_id === 'd1')?.position).toBe(5);
+        expect(resolved.find(r => r.race_id === 'r2' && r.driver_id === 'sub1')?.position).toBe(7);
+    });
+
+    it('does not mutate the input arrays', () => {
+        const results = [mockResult('r1', 'sub1', 4)];
+        const subs = [mockSub('r1', 'd1', 'sub1')];
+
+        applySubstitutions(results, subs);
+
+        expect(results[0].driver_id).toBe('sub1');
     });
 });

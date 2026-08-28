@@ -4,7 +4,7 @@
  * Calculates points based on driver finishing positions and the season's point mapping.
  */
 
-import type { PointMapping, RaceResult, Pick, PickWithDetails } from '@/lib/types/database';
+import type { PointMapping, RaceResult, Pick, PickWithDetails, DriverSubstitution } from '@/lib/types/database';
 
 /**
  * Get points for a specific finishing position
@@ -146,4 +146,33 @@ export function calculateSeasonStandings(
     return Object.entries(standings)
         .map(([userId, data]) => ({ userId, ...data }))
         .sort((a, b) => b.totalPoints - a.totalPoints);
+}
+
+/**
+ * Apply per-race driver substitutions to a set of race results (seat-based scoring).
+ *
+ * Any result row recorded for a substitute driver is re-keyed to the seat
+ * (original) driver, so pick matching by driver_id credits the seat's picker.
+ * Resolution is a single pass with no transitivity: chained swaps (A subs for B
+ * while C subs for A) resolve as two independent re-keys. Uniqueness of
+ * (race_id, seat_driver_id) and (race_id, substitute_driver_id) is enforced by
+ * the database, so re-keying cannot produce duplicate driver_ids.
+ *
+ * Use the returned rows for scoring lookups only — joined display fields (e.g.
+ * an embedded driver object) still describe the real driver who scored the result.
+ */
+export function applySubstitutions(
+    results: RaceResult[],
+    substitutions: DriverSubstitution[]
+): RaceResult[] {
+    if (substitutions.length === 0) return results;
+
+    const seatBySubstitute = new Map(
+        substitutions.map(s => [`${s.race_id}:${s.substitute_driver_id}`, s.seat_driver_id])
+    );
+
+    return results.map(result => {
+        const seatDriverId = seatBySubstitute.get(`${result.race_id}:${result.driver_id}`);
+        return seatDriverId ? { ...result, driver_id: seatDriverId } : result;
+    });
 }

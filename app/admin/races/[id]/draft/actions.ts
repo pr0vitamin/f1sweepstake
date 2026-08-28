@@ -9,7 +9,8 @@ import {
 } from "@/lib/draft-order";
 import {
     calculateRacePoints,
-    getPointsForPosition
+    getPointsForPosition,
+    applySubstitutions
 } from "@/lib/scoring";
 import { DriverWithTeam } from "@/lib/types/database";
 
@@ -69,6 +70,14 @@ export async function generateDraftOrder(raceId: string, strategy: 'random' | 'p
 
         if (resultsError) throw new Error("Could not fetch previous results");
 
+        // Fetch substitutions for previous race (seat-based scoring)
+        const { data: substitutions, error: subsError } = await supabase
+            .from("driver_substitutions")
+            .select("*")
+            .eq("race_id", prevRace.id);
+
+        if (subsError) throw new Error("Could not fetch previous substitutions");
+
         // Fetch point mappings
         const { data: mappings, error: pointsError } = await supabase
             .from("point_mappings")
@@ -82,11 +91,12 @@ export async function generateDraftOrder(raceId: string, strategy: 'random' | 'p
         const dsqPoints = (race.season as any).dsq_points ?? -5;
 
         // Calculate points for each user
+        const resolvedResults = applySubstitutions(results, substitutions || []);
         const playerPoints = profiles.map(profile => {
             const userPicks = prevPicksRaw.filter((p: any) => p.user_id === profile.id);
             // We need to cast picks to match scoring expectation if needed, or just map manual
             // calculateRacePoints expects Pick[] and returns total number
-            const points = calculateRacePoints(userPicks, results, mappings, dnfPoints, dsqPoints);
+            const points = calculateRacePoints(userPicks, resolvedResults, mappings, dnfPoints, dsqPoints);
             return {
                 profile,
                 previousRacePoints: points

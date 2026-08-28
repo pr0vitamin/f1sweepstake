@@ -102,6 +102,7 @@ export function SeasonForm({ initialData, currentSeasonId }: SeasonFormProps) {
                 last_name: driver.last_name,
                 abbreviation: driver.abbreviation,
                 is_active: driver.is_active,
+                is_substitute: driver.is_substitute,
             }));
 
             const { error: insertDriversError } = await supabase

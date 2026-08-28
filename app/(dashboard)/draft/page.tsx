@@ -79,7 +79,8 @@ export default async function DraftPage() {
         .from("drivers")
         .select("*, team:teams!inner(*)")
         .eq("team.season_id", race.season_id)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .eq("is_substitute", false);
 
     if (driversError) {
         return <div>Error loading drivers</div>;

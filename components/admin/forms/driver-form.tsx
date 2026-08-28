@@ -38,6 +38,7 @@ const formSchema = z.object({
     ),
     team_id: z.string().uuid("Please select a team"),
     is_active: z.boolean().default(true),
+    is_substitute: z.boolean().default(false),
 });
 
 interface DriverFormProps {
@@ -56,6 +57,7 @@ export function DriverForm({ initialData, teams }: DriverFormProps) {
         driver_number: number;
         team_id: string;
         is_active: boolean;
+        is_substitute: boolean;
     };
 
     const form = useForm<FormValues>({
@@ -67,6 +69,7 @@ export function DriverForm({ initialData, teams }: DriverFormProps) {
             driver_number: initialData?.driver_number || 0,
             team_id: initialData?.team_id || "",
             is_active: initialData?.is_active ?? true,
+            is_substitute: initialData?.is_substitute ?? false,
         },
     });
 
@@ -85,6 +88,7 @@ export function DriverForm({ initialData, teams }: DriverFormProps) {
                         driver_number: values.driver_number,
                         team_id: values.team_id,
                         is_active: values.is_active,
+                        is_substitute: values.is_substitute,
                     })
                     .eq("id", initialData.id);
 
@@ -99,6 +103,7 @@ export function DriverForm({ initialData, teams }: DriverFormProps) {
                         driver_number: values.driver_number,
                         team_id: values.team_id,
                         is_active: values.is_active,
+                        is_substitute: values.is_substitute,
                     });
 
                 if (error) throw error;
@@ -213,6 +218,25 @@ export function DriverForm({ initialData, teams }: DriverFormProps) {
                             </FormControl>
                             <div className="space-y-1 leading-none">
                                 <FormLabel>Active</FormLabel>
+                            </div>
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="is_substitute"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                                <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel>Substitute / reserve driver</FormLabel>
+                                <FormDescription>Substitute drivers can appear in race results but are excluded from the draft pool. Keep them Active so race results can match them.</FormDescription>
                             </div>
                         </FormItem>
                     )}

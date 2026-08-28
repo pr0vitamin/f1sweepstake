@@ -186,6 +186,8 @@ function getEntityName(data: any, entityType: string): string {
             return `Pick (Round ${data.draft_round || "?"})`;
         case "point_mappings":
             return `P${data.position} → ${data.points} pts`;
+        case "driver_substitutions":
+            return "Driver Substitution";
         default:
             return data.name || data.id || "Entity";
     }
