@@ -37,6 +37,7 @@ const mockDriver = (id: string, number: number): Driver => ({
     last_name: `${number}`,
     abbreviation: `D${number}`,
     is_active: true,
+    is_substitute: false,
     created_at: '',
     updated_at: '',
 });

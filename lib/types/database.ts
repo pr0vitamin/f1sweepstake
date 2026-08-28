@@ -90,6 +90,7 @@ export interface Driver {
   last_name: string;
   abbreviation: string;
   is_active: boolean;
+  is_substitute: boolean;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -144,6 +145,26 @@ export type RaceResultUpdate = Partial<Omit<RaceResult, 'id' | 'race_id' | 'driv
 // Race result with driver info (for display)
 export interface RaceResultWithDriver extends RaceResult {
   driver: DriverWithTeam;
+}
+
+// ============================================================================
+// Driver Substitutions
+// ============================================================================
+
+export interface DriverSubstitution {
+  id: UUID;
+  race_id: UUID;
+  seat_driver_id: UUID;
+  substitute_driver_id: UUID;
+  created_at: Timestamp;
+}
+
+export type DriverSubstitutionInsert = Omit<DriverSubstitution, 'id' | 'created_at'>;
+
+// Substitution with driver info (for display)
+export interface DriverSubstitutionWithDrivers extends DriverSubstitution {
+  seat_driver: Driver;
+  substitute_driver: Driver;
 }
 
 // ============================================================================
@@ -202,7 +223,8 @@ export type ChangelogEntityType =
   | 'races'
   | 'race_results'
   | 'picks'
-  | 'point_mappings';
+  | 'point_mappings'
+  | 'driver_substitutions';
 
 export interface ChangelogEntry {
   id: UUID;
