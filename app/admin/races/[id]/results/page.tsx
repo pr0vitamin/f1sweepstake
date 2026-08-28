@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Race, Driver, RaceResult } from "@/lib/types/database";
+import { Race, Driver, RaceResult, DriverSubstitutionWithDrivers } from "@/lib/types/database";
 import { ResultsManager } from "@/components/admin/results-manager";
+import { SubstitutionsManager } from "@/components/admin/substitutions-manager";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -41,6 +42,16 @@ export default async function RaceResultsPage({ params }: RaceResultsPageProps) 
         .eq("is_active", true)
         .order("driver_number");
 
+    // Fetch substitutions for this race (with driver info for display)
+    const { data: substitutions } = await supabase
+        .from("driver_substitutions")
+        .select(`
+            *,
+            seat_driver:drivers!driver_substitutions_seat_driver_id_fkey(*),
+            substitute_driver:drivers!driver_substitutions_substitute_driver_id_fkey(*)
+        `)
+        .eq("race_id", raceId);
+
     const typedRace = race as Race & { season: { year: number } };
     const typedResults = (existingResults || []) as (RaceResult & { driver: Driver })[];
     const typedDrivers = (drivers || []) as (Driver & { team: { name: string; color: string } })[];
@@ -64,6 +75,13 @@ export default async function RaceResultsPage({ params }: RaceResultsPageProps) 
                     {typedRace.location} • Round {typedRace.round_number} • {typedRace.season.year}
                 </p>
             </div>
+
+            <SubstitutionsManager
+                race={typedRace}
+                substitutions={(substitutions || []) as DriverSubstitutionWithDrivers[]}
+                drivers={typedDrivers}
+                existingResults={typedResults}
+            />
 
             <ResultsManager
                 race={typedRace}
