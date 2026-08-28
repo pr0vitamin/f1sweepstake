@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getPointsForPosition } from "@/lib/scoring";
+import { getPointsForPosition, applySubstitutions } from "@/lib/scoring";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy } from "lucide-react";
@@ -47,6 +47,12 @@ export default async function LeaderboardPage() {
         .select("*")
         .in("race_id", races?.map(r => r.id) || []);
 
+    // Get substitutions for all finalized races (seat-based scoring)
+    const { data: substitutions } = await supabase
+        .from("driver_substitutions")
+        .select("*")
+        .in("race_id", races?.map(r => r.id) || []);
+
     // 5. Get point mappings
     const { data: mappings } = await supabase
         .from("point_mappings")
@@ -60,9 +66,11 @@ export default async function LeaderboardPage() {
         racesParticipated: number;
     }>();
 
+    const resolvedResults = applySubstitutions(results || [], substitutions || []);
+
     if (picks && results && mappings) {
         for (const pick of picks as any[]) {
-            const result = results.find(r =>
+            const result = resolvedResults.find(r =>
                 r.race_id === pick.race_id &&
                 r.driver_id === pick.driver_id
             );
