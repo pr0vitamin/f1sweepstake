@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { Flag, MapPin, Calendar, Trophy, ArrowLeft, Users } from "lucide-react";
+import { applySubstitutions } from "@/lib/scoring";
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,16 @@ export default async function RaceDetailPage({ params }: Props) {
         .eq("race_id", id)
         .order("position");
 
+    // Fetch substitutions for this race (seat-based scoring + badges)
+    const { data: substitutions } = await supabase
+        .from("driver_substitutions")
+        .select(`
+            *,
+            seat_driver:drivers!driver_substitutions_seat_driver_id_fkey(*),
+            substitute_driver:drivers!driver_substitutions_substitute_driver_id_fkey(*)
+        `)
+        .eq("race_id", id);
+
     // Fetch point mappings for scoring
     const { data: pointMappings } = await supabase
         .from("point_mappings")
@@ -58,11 +69,11 @@ export default async function RaceDetailPage({ params }: Props) {
     // Get user's picks
     const userPicks = picks?.filter(p => p.user_id === user?.id) || [];
 
-    // Helper to get driver's result and points
-    const getDriverResult = (driverId: string) => {
-        const result = results?.find(r => r.driver_id === driverId);
-        if (!result) return null;
+    // Seat-resolved copy of results: substitute rows re-keyed to the seat driver
+    const resolvedResults = applySubstitutions(results ?? [], substitutions ?? []);
 
+    // Helper to compute status + points from a result row
+    const resultToInfo = (result: { position: number | null; dnf: boolean; dns: boolean; dsq: boolean }) => {
         let points = 0;
         let position = result.position;
         let status = position !== null ? `P${position}` : "N/C";
@@ -84,13 +95,31 @@ export default async function RaceDetailPage({ params }: Props) {
         return { position, status, points };
     };
 
+    // Raw lookup: what the driver actually did (results table display)
+    const getDriverResult = (driverId: string) => {
+        const result = results?.find(r => r.driver_id === driverId);
+        return result ? resultToInfo(result) : null;
+    };
+
+    // Seat-resolved lookup: what a picked driver scores (substitutions applied)
+    const getPickResult = (driverId: string) => {
+        const result = resolvedResults.find(r => r.driver_id === driverId);
+        return result ? resultToInfo(result) : null;
+    };
+
+    // Substitution lookups for badges
+    const subForSeat = (driverId: string) =>
+        substitutions?.find(s => s.seat_driver_id === driverId);
+    const subBySubstitute = (driverId: string) =>
+        substitutions?.find(s => s.substitute_driver_id === driverId);
+
     const raceDate = parseISO(race.race_date);
     const today = new Date().toISOString().split('T')[0];
     const isPast = race.race_date < today;
 
     // Calculate total points for user
     const totalPoints = userPicks.reduce((sum, pick) => {
-        const result = getDriverResult(pick.driver_id);
+        const result = getPickResult(pick.driver_id);
         return sum + (result?.points ?? 0);
     }, 0);
 
@@ -115,7 +144,7 @@ export default async function RaceDetailPage({ params }: Props) {
             userEntry.picks.push(pick);
 
             if (race.results_finalized) {
-                const driverResult = getDriverResult(pick.driver_id);
+                const driverResult = getPickResult(pick.driver_id);
                 userEntry.totalPoints += driverResult?.points ?? 0;
             }
         });
@@ -195,7 +224,7 @@ export default async function RaceDetailPage({ params }: Props) {
                         {userPicks.length > 0 ? (
                             <div className="space-y-3">
                                 {userPicks.map((pick, i) => {
-                                    const driverResult = getDriverResult(pick.driver_id);
+                                    const driverResult = getPickResult(pick.driver_id);
                                     return (
                                         <div key={pick.id} className="flex items-center justify-between rounded-md border p-3">
                                             <div className="flex items-center gap-3">
@@ -208,6 +237,12 @@ export default async function RaceDetailPage({ params }: Props) {
                                                 <div>
                                                     <p className="font-medium">{pick.driver?.first_name} {pick.driver?.last_name}</p>
                                                     <p className="text-xs text-muted-foreground">{pick.driver?.team?.name}</p>
+                                                    {race.results_finalized && subForSeat(pick.driver_id) && (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            scored by {subForSeat(pick.driver_id)?.substitute_driver?.first_name}{" "}
+                                                            {subForSeat(pick.driver_id)?.substitute_driver?.last_name}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -278,6 +313,11 @@ export default async function RaceDetailPage({ params }: Props) {
                                                     {result.driver?.driver_number}
                                                 </div>
                                                 <span className="text-sm font-medium">{result.driver?.first_name} {result.driver?.last_name}</span>
+                                                {subBySubstitute(result.driver_id) && (
+                                                    <Badge variant="outline" className="text-xs font-normal">
+                                                        subbing for {subBySubstitute(result.driver_id)?.seat_driver?.last_name}
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <Badge variant={resultInfo && resultInfo.points >= 0 ? "secondary" : "destructive"}>
                                                 {resultInfo ? (resultInfo.points > 0 ? "+" : "") + resultInfo.points : 0} pts
