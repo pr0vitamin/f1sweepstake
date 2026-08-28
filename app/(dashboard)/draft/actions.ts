@@ -93,7 +93,8 @@ export async function makePick(raceId: string, driverId: string, onBehalfOfUserI
             .from("drivers")
             .select("id, team:teams!inner(season_id)")
             .eq("team.season_id", race.season_id)
-            .eq("is_active", true);
+            .eq("is_active", true)
+            .eq("is_substitute", false);
 
         if (allDrivers) {
             const pickedDriverIds = new Set(updatedPicks.map(p => p.driver_id));
