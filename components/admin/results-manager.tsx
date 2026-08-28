@@ -239,6 +239,12 @@ export function ResultsManager({
                             .select("*")
                             .eq("race_id", race.id);
 
+                        // 5b. Fetch substitutions for THIS race (seat-based scoring)
+                        const { data: substitutions } = await supabase
+                            .from("driver_substitutions")
+                            .select("*")
+                            .eq("race_id", race.id);
+
                         // 6. Fetch point mappings
                         const { data: mappings } = await supabase
                             .from("point_mappings")
@@ -256,12 +262,13 @@ export function ResultsManager({
                         const dsqPoints = season?.dsq_points ?? -5;
 
                         // 8. Calculate points for each user based on THIS race
-                        const { calculateRacePoints } = await import("@/lib/scoring");
+                        const { calculateRacePoints, applySubstitutions } = await import("@/lib/scoring");
                         const { generatePerformanceDraftOrder } = await import("@/lib/draft-order");
 
+                        const resolvedResults = applySubstitutions(results || [], substitutions || []);
                         const playerPoints = profiles.map(profile => {
                             const userPicks = (picks || []).filter(p => p.user_id === profile.id);
-                            const points = calculateRacePoints(userPicks, results || [], mappings || [], dnfPoints, dsqPoints);
+                            const points = calculateRacePoints(userPicks, resolvedResults, mappings || [], dnfPoints, dsqPoints);
                             return {
                                 profile,
                                 previousRacePoints: points
