@@ -5,6 +5,7 @@ import {
     calculateRaceLeaderboard,
     calculateSeasonStandings,
     applySubstitutions,
+    findAmbiguousSeatDrivers,
 } from '@/lib/scoring';
 import type { PointMapping, RaceResult, Pick, PickWithDetails, Profile, Driver, Team, DriverSubstitution } from '@/lib/types/database';
 
@@ -320,5 +321,39 @@ describe('applySubstitutions', () => {
         applySubstitutions(results, subs);
 
         expect(results[0].driver_id).toBe('sub1');
+    });
+});
+
+describe('findAmbiguousSeatDrivers', () => {
+    it('flags a seat driver whose own result row would survive resolution', () => {
+        // d1 has a substitution recorded AND raced themselves — genuinely ambiguous
+        const results = [mockResult('r1', 'd1', 8), mockResult('r1', 'sub1', 4)];
+        const subs = [mockSub('r1', 'd1', 'sub1')];
+
+        expect(findAmbiguousSeatDrivers(results, subs)).toEqual(['d1']);
+    });
+
+    it('does not flag a chained substitution where the seat driver drove another seat', () => {
+        // A subs for B's seat (so A has a legitimate result row), C subs for A's seat.
+        // A's row is re-keyed to B during resolution — no ambiguity.
+        const results = [mockResult('r1', 'A', 3), mockResult('r1', 'C', 10)];
+        const subs = [mockSub('r1', 'B', 'A'), mockSub('r1', 'A', 'C')];
+
+        expect(findAmbiguousSeatDrivers(results, subs)).toEqual([]);
+    });
+
+    it('does not flag a seat driver with no result row of their own', () => {
+        const results = [mockResult('r1', 'sub1', 4)];
+        const subs = [mockSub('r1', 'd1', 'sub1')];
+
+        expect(findAmbiguousSeatDrivers(results, subs)).toEqual([]);
+    });
+
+    it('scopes the re-key exemption to the same race', () => {
+        // d1 is a substitute in r2, but that does not excuse d1's own row in r1
+        const results = [mockResult('r1', 'd1', 8), mockResult('r1', 'sub1', 4)];
+        const subs = [mockSub('r1', 'd1', 'sub1'), mockSub('r2', 'other', 'd1')];
+
+        expect(findAmbiguousSeatDrivers(results, subs)).toEqual(['d1']);
     });
 });

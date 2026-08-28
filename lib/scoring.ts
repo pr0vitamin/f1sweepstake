@@ -176,3 +176,34 @@ export function applySubstitutions(
         return seatDriverId ? { ...result, driver_id: seatDriverId } : result;
     });
 }
+
+/**
+ * Find seat drivers whose substitution setup is genuinely ambiguous.
+ *
+ * A seat driver is ambiguous when they have a result row of their own that
+ * would SURVIVE resolution — i.e. they are not themselves re-keyed away as a
+ * substitute for another seat in the same race. In that state, resolution
+ * yields two rows for the same driver_id and pick scoring becomes
+ * order-dependent.
+ *
+ * A chained swap (A subs for B's seat while C subs for A's seat) is NOT
+ * ambiguous: A's own result row is re-keyed to B, so it never collides with
+ * C's row re-keyed to A.
+ *
+ * Returns the seat_driver_ids that need admin attention.
+ */
+export function findAmbiguousSeatDrivers(
+    results: RaceResult[],
+    substitutions: DriverSubstitution[]
+): string[] {
+    const substituteKeys = new Set(
+        substitutions.map(s => `${s.race_id}:${s.substitute_driver_id}`)
+    );
+
+    return substitutions
+        .filter(s =>
+            results.some(r => r.race_id === s.race_id && r.driver_id === s.seat_driver_id) &&
+            !substituteKeys.has(`${s.race_id}:${s.seat_driver_id}`)
+        )
+        .map(s => s.seat_driver_id);
+}
